@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import { FileText } from 'lucide-svelte';
+	import { File } from 'lucide-svelte';
 
 	// Props definition, if any are needed in the future (e.g., currentNoteId for highlighting)
 	// let { currentNoteId: activeNoteId } = $props<{ currentNoteId?: string }>();
@@ -101,7 +101,7 @@
 			{:else}
 				<Sidebar.Menu>
 					{#each notes as note (note.id)}
-						<Sidebar.MenuItem class="my-0.5 text-sm">
+						<Sidebar.MenuItem class="my-1 text-sm">
 							<Sidebar.MenuButton
 								class="w-full justify-start p-0 text-sm"
 								aria-label={`Open note: ${note.title || 'Untitled Note'}`}
@@ -110,8 +110,9 @@
 									<a
 										href={`${note.canonical_path}`}
 										{...menuButtonProps}
-										class="flex w-full items-center rounded-md p-0 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+										class="flex w-full shrink-0 items-center gap-1 rounded-md p-0 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
 									>
+										<File class="h-4 w-4 shrink-0" />
 										<!-- <FileText class="h-4 w-4 flex-shrink-0 text-gray-600 dark:text-gray-400" /> -->
 										<span class="truncate text-gray-700 dark:text-gray-300">
 											{note.title || 'Untitled Note'}
