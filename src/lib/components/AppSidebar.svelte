@@ -61,7 +61,7 @@
 	// in the parent, onMount will run each time it's "loaded into view".
 </script>
 
-<Sidebar.Root side="left" collapsible="icon" class="border-r dark:border-gray-700">
+<Sidebar.Root side="left" collapsible="icon" class="border-none bg-gray-50">
 	<Sidebar.Header class="p-3">
 		<Sidebar.Group>
 			<Sidebar.GroupLabel class="text-base font-semibold text-gray-800 dark:text-gray-100"
@@ -88,7 +88,7 @@
 					<p class="font-medium">Error loading notes:</p>
 					<p>{errorMessage}</p>
 					<button
-						on:click={fetchNotes}
+						onclick={fetchNotes}
 						class="mt-2 text-sm font-medium text-red-700 hover:underline dark:text-red-300"
 					>
 						Try again
