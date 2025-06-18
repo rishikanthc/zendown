@@ -5,11 +5,22 @@
 	import { getCartaInstance } from './getCarta';
 	import './tw.css';
 
+	// Placeholder for the actual type of a newly created note.
+	// This should ideally match the structure returned by /api/notes/create
+	// and expected by the notes list in +page.svelte.
+	type NewNoteData = any; 
+
 	let {
 		key,
 		initialContent,
-		id: initialId
-	}: { key?: number; initialContent?: string; id?: string } = $props();
+		id: initialId,
+		onNoteCreated
+	}: {
+		key?: number;
+		initialContent?: string;
+		id?: string;
+		onNoteCreated?: (newNote: NewNoteData) => void | Promise<void>; // Modified prop type
+	} = $props();
 
 	let currentNoteId = $state(initialId);
 
@@ -30,38 +41,21 @@
 		})()
 	);
 
-	// $effect(() => {
-	// 	if (initialContent !== undefined) {
-	// 		noteValue = initialContent;
-	// 	}
-	// });
-
 	let debounceTimer: number | undefined;
 
 	$effect(() => {
-		// Capture noteValue for the closure, as noteValue itself is reactive
-		// and could change before the timeout fires if we don't.
 		const valueToSave = noteValue;
-
-		// Only save to generic local storage if it's a new note that hasn't been saved yet (no currentNoteId)
-		// and wasn't loaded with initialContent (which implies it's an existing note being edited).
 		if (
 			currentNoteId === undefined &&
 			initialContent === undefined &&
 			typeof window !== 'undefined' &&
 			window.localStorage
 		) {
-			// Clear any existing timer
 			clearTimeout(debounceTimer);
-			// Set a new timer
 			debounceTimer = window.setTimeout(() => {
 				window.localStorage.setItem(localStorageKey, valueToSave);
-			}, 500); // 500ms delay, you can adjust this value
+			}, 500);
 		}
-
-		// Cleanup function for the effect:
-		// This will run when the effect re-runs (due to noteValue changing)
-		// or when the component is unmounted.
 		return () => {
 			clearTimeout(debounceTimer);
 		};
@@ -80,13 +74,13 @@
 	}
 
 	async function saveNote() {
-		const title = extractTitleFromMarkdown(noteValue); // Client-side extraction for pre-flight check
+		const title = extractTitleFromMarkdown(noteValue);
 
 		if (!title) {
 			const message =
 				'Error: A title (H1 heading, e.g., "# Your Title") is required to save the note.';
 			saveStatusMessage = message;
-			window.alert(message);
+			window.alert(message); // Consider a less intrusive notification
 			setTimeout(() => {
 				if (saveStatusMessage === message) saveStatusMessage = '';
 			}, 5000);
@@ -97,28 +91,20 @@
 		let response;
 		let requestBody;
 		let apiUrl: string;
+		const isNewNote = !currentNoteId; 
 
-		if (currentNoteId) {
-			apiUrl = '/api/notes/update';
-			requestBody = {
-				id: currentNoteId,
-				content: noteValue
-				// tags could be added here if the UI supports them
-			};
-		} else {
+		if (isNewNote) {
 			apiUrl = '/api/notes/create';
-			requestBody = {
-				content: noteValue
-				// tags could be added here
-			};
+			requestBody = { content: noteValue };
+		} else {
+			apiUrl = '/api/notes/update';
+			requestBody = { id: currentNoteId, content: noteValue };
 		}
 
 		try {
 			response = await fetch(apiUrl, {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(requestBody)
 			});
 
@@ -131,30 +117,30 @@
 			}
 
 			if (response.ok) {
-				// The backend's extractTitleFromMarkdownServer is the source of truth for the saved title.
-				const savedTitle = responseData.title || title; // Fallback to client-extracted if somehow missing
+				const savedTitle = responseData.title || title;
 				const successMessage = `Note '${savedTitle}' saved successfully!`;
 				saveStatusMessage = successMessage;
 
-				if (!currentNoteId && responseData.id) {
-					// If it was a create operation and successful, store the new ID
-					currentNoteId = responseData.id;
-					// Clear the generic local storage for new notes as this one is now saved.
+				if (isNewNote && responseData.id) {
+					currentNoteId = responseData.id; 
 					if (typeof window !== 'undefined' && window.localStorage) {
 						window.localStorage.removeItem(localStorageKey);
 					}
+					// Call the onNoteCreated callback with the new note data
+					if (onNoteCreated) {
+						await onNoteCreated(responseData); // Pass the new note data
+					}
 				}
-				// window.alert(successMessage); // Usually not needed with status message
 			} else {
 				const errorMessage = `Error saving note: ${responseData.message || response.statusText || 'Unknown server error.'}`;
 				saveStatusMessage = errorMessage;
-				window.alert(errorMessage);
+				window.alert(errorMessage); // Consider a less intrusive notification
 			}
 		} catch (error: any) {
 			console.error('Failed to save note:', error);
 			const networkErrorMessage = `Failed to save note: ${error?.message || 'A network or client-side error occurred.'}`;
 			saveStatusMessage = networkErrorMessage;
-			window.alert(networkErrorMessage);
+			window.alert(networkErrorMessage); // Consider a less intrusive notification
 		}
 
 		const titleRequiredErrorMessage =
@@ -162,7 +148,7 @@
 		if (saveStatusMessage !== titleRequiredErrorMessage) {
 			setTimeout(() => {
 				if (saveStatusMessage !== titleRequiredErrorMessage) saveStatusMessage = '';
-			}, 5000);
+			}, 5000); 
 		}
 	}
 

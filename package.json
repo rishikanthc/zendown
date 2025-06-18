@@ -21,6 +21,7 @@
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
+		"@internationalized/date": "^3.8.2",
 		"@lucide/svelte": "^0.517.0",
 		"@playwright/test": "^1.49.1",
 		"@sveltejs/adapter-auto": "^6.0.0",
@@ -29,6 +30,7 @@
 		"@tailwindcss/typography": "^0.5.15",
 		"@tailwindcss/vite": "^4.0.0",
 		"@types/node": "^22",
+		"bits-ui": "^2.8.2",
 		"clsx": "^2.1.1",
 		"drizzle-kit": "^0.30.2",
 		"eslint": "^9.18.0",
@@ -61,6 +63,7 @@
 		"carta-md": "^4.11.1",
 		"drizzle-orm": "^0.40.0",
 		"isomorphic-dompurify": "^2.25.0",
+		"lucide-svelte": "^0.517.0",
 		"rehype-callouts": "^2.1.1",
 		"rehype-katex": "^7.0.1",
 		"rehype-mermaid": "^3.0.0"
