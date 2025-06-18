@@ -54,14 +54,14 @@
 
 	onMount(() => {
 		fetchNotes();
-		fetchNotes();
+		// fetchNotes();
 	});
 
 	// This component fetches notes on mount. If it's conditionally rendered (e.g. using #if)
 	// in the parent, onMount will run each time it's "loaded into view".
 </script>
 
-<Sidebar.Root side="left" collapsible="icon" class="border-none bg-gray-50">
+<Sidebar.Root side="left" collapsible="offcanvas" class="border-none bg-gray-50">
 	<Sidebar.Header class="p-3">
 		<Sidebar.Group>
 			<Sidebar.GroupLabel class="text-base font-semibold text-gray-800 dark:text-gray-100"
