@@ -16,6 +16,6 @@
 	</header>
 
 	<!-- <div class="flex-grow"> -->
-	<NotePanel initialContent={data.note.content} />
+	<NotePanel initialContent={data.note.content} id={data.note.id} />
 	<!-- </div> -->
 </div>

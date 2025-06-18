@@ -5,7 +5,13 @@
 	import { getCartaInstance } from './getCarta';
 	import './tw.css';
 
-	let { key, initialContent }: { key?: number; initialContent?: string } = $props();
+	let {
+		key,
+		initialContent,
+		id: initialId
+	}: { key?: number; initialContent?: string; id?: string } = $props();
+
+	let currentNoteId = $state(initialId);
 
 	const carta = getCartaInstance('light');
 	const localStorageKey = 'carta-editor-content';
@@ -37,7 +43,14 @@
 		// and could change before the timeout fires if we don't.
 		const valueToSave = noteValue;
 
-		if (initialContent === undefined && typeof window !== 'undefined' && window.localStorage) {
+		// Only save to generic local storage if it's a new note that hasn't been saved yet (no currentNoteId)
+		// and wasn't loaded with initialContent (which implies it's an existing note being edited).
+		if (
+			currentNoteId === undefined &&
+			initialContent === undefined &&
+			typeof window !== 'undefined' &&
+			window.localStorage
+		) {
 			// Clear any existing timer
 			clearTimeout(debounceTimer);
 			// Set a new timer
@@ -67,7 +80,7 @@
 	}
 
 	async function saveNote() {
-		const title = extractTitleFromMarkdown(noteValue);
+		const title = extractTitleFromMarkdown(noteValue); // Client-side extraction for pre-flight check
 
 		if (!title) {
 			const message =
@@ -81,33 +94,59 @@
 		}
 
 		saveStatusMessage = 'Saving...';
+		let response;
+		let requestBody;
+		let apiUrl: string;
+
+		if (currentNoteId) {
+			apiUrl = '/api/notes/update';
+			requestBody = {
+				id: currentNoteId,
+				content: noteValue
+				// tags could be added here if the UI supports them
+			};
+		} else {
+			apiUrl = '/api/notes/create';
+			requestBody = {
+				content: noteValue
+				// tags could be added here
+			};
+		}
+
 		try {
-			const response = await fetch('/api/notes', {
+			response = await fetch(apiUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({
-					title: title,
-					content: noteValue
-				})
+				body: JSON.stringify(requestBody)
 			});
 
 			let responseData;
-			try {
+			const contentType = response.headers.get('content-type');
+			if (contentType && contentType.includes('application/json')) {
 				responseData = await response.json();
-			} catch (jsonError) {
-				responseData = {
-					message: response.statusText || 'Received non-JSON response from server.'
-				};
+			} else {
+				responseData = { message: response.statusText || 'Received non-JSON response from server.' };
 			}
 
 			if (response.ok) {
-				const successMessage = `Note '${responseData.title || title}' saved successfully!`;
+				// The backend's extractTitleFromMarkdownServer is the source of truth for the saved title.
+				const savedTitle = responseData.title || title; // Fallback to client-extracted if somehow missing
+				const successMessage = `Note '${savedTitle}' saved successfully!`;
 				saveStatusMessage = successMessage;
-				// window.alert(successMessage);
+
+				if (!currentNoteId && responseData.id) {
+					// If it was a create operation and successful, store the new ID
+					currentNoteId = responseData.id;
+					// Clear the generic local storage for new notes as this one is now saved.
+					if (typeof window !== 'undefined' && window.localStorage) {
+						window.localStorage.removeItem(localStorageKey);
+					}
+				}
+				// window.alert(successMessage); // Usually not needed with status message
 			} else {
-				const errorMessage = `Error saving note: ${responseData.message || 'Unknown server error.'}`;
+				const errorMessage = `Error saving note: ${responseData.message || response.statusText || 'Unknown server error.'}`;
 				saveStatusMessage = errorMessage;
 				window.alert(errorMessage);
 			}

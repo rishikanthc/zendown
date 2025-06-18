@@ -3,19 +3,7 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
 import { eq, or } from 'drizzle-orm';
-
-// Helper function to create a canonical path (slug) - should be consistent with the one in POST /api/notes
-function slugify(text: string): string {
-	if (!text) return '';
-	return text
-		.toString()
-		.normalize('NFKD') // Normalize accented characters
-		.toLowerCase()
-		.trim()
-		.replace(/\s+/g, '-') // Replace spaces with -
-		.replace(/[^\w-]+/g, '') // Remove all non-word chars (except hyphen)
-		.replace(/--+/g, '-'); // Replace multiple - with single -
-}
+import { slugify } from '$lib/server/utils';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const title = url.searchParams.get('title');
