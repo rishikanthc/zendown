@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { Carta, MarkdownEditor } from 'carta-md';
-	import { onMount, onDestroy, tick } from 'svelte';
+	import { onMount, onDestroy } from 'svelte'; // Removed unused 'tick'
 	import 'carta-md/default.css';
-	import { Eye, Pencil } from 'lucide-svelte';
+	import { Eye, Pencil, Menu } from 'lucide-svelte'; // Added Menu icon
 	import { getCartaInstance } from './getCarta';
 	import './tw.css'; // Ensure Tailwind is processed for this component
 	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Sidebar from '$lib/components/ui/sidebar/index.js'; // Added for Sidebar
+	import AppSidebar from '../lib/components/AppSidebar.svelte'; // Added AppSidebar component
 	// Placeholder for the actual type of a newly created note.
 	type NewNoteData = any;
 
@@ -214,34 +216,45 @@
 	});
 </script>
 
-<div class="flex min-h-screen w-full flex-col bg-white dark:bg-gray-900">
-	<!-- Header -->
-	<header
-		class="sticky top-0 z-30 flex items-center justify-between px-4 py-3 sm:px-6 dark:bg-gray-800"
-	>
-		<a
-			href="/"
-			class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none dark:text-gray-200 dark:hover:bg-gray-700"
-		>
-			&larr; Back to Notes
-		</a>
-		<Button
-			onclick={togglePreviewMode}
-			variant="secondary"
-			size="icon"
-			title="Toggle edit/preview (Ctrl+P or Cmd+P)"
-		>
-			{#if currentMode === 'write'}
-				<Eye stroke-width={2} class="rounded-sm" />
-			{:else}
-				<Pencil stroke-width={2} class="rounded-sm" />
-			{/if}
-		</Button>
-	</header>
+<Sidebar.Provider>
+	<AppSidebar />
 
-	<!-- Main Content Area (Scrollable) -->
+	<div class="flex min-h-screen w-full flex-col bg-white dark:bg-gray-900">
+		<!-- Header -->
+		<header
+			class="sticky top-0 z-30 flex items-center justify-between px-4 py-3 sm:px-6 dark:bg-gray-800"
+		>
+			<div class="flex items-center gap-2">
+				<Sidebar.Trigger asChild>
+					<Button variant="secondary" size="icon" title="Toggle Sidebar (Ctrl+B or Cmd+B)">
+						<Menu class="h-5 w-5" />
+						<span class="sr-only">Toggle navigation sidebar</span>
+					</Button>
+				</Sidebar.Trigger>
+				<a
+					href="/"
+					class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none dark:text-gray-200 dark:hover:bg-gray-700"
+				>
+					&larr; Back to Notes
+				</a>
+			</div>
+			<Button
+				onclick={togglePreviewMode}
+				variant="secondary"
+				size="icon"
+				title="Toggle edit/preview (Ctrl+P or Cmd+P)"
+			>
+				{#if currentMode === 'write'}
+					<Eye stroke-width={2} class="rounded-sm" />
+				{:else}
+					<Pencil stroke-width={2} class="rounded-sm" />
+				{/if}
+			</Button>
+		</header>
 
-	<!-- Editor Wrapper (Centering & Max Width) -->
+		<!-- Main Content Area (Scrollable) -->
+
+		<!-- Editor Wrapper (Centering & Max Width) -->
 	<div
 		class="prose prose-base dark:prose-invert mx-auto h-full w-full max-w-[800px] px-4 py-6 text-gray-800 sm:px-2 dark:text-gray-100"
 	>
@@ -279,10 +292,39 @@
 		</div>
 	{/if}
 </div>
+</Sidebar.Provider>
 
 <style>
 	/* Styles from the original component, if any specific ones are needed beyond Tailwind. */
 	/* For Carta in dark mode, if not handled by 'tw' theme or prose-invert */
 
 	@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Serif:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Noto+Sans+Mono:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
+
+	/* 
+    These CSS variables are for theming the shadcn-svelte sidebar.
+    Ideally, these should be in your global app.css or a similar global stylesheet.
+    The `npx shadcn-svelte@latest add sidebar` command should handle this.
+    Adding them here as per instruction to modify only NotePanel.svelte.
+  */
+	:global(:root) {
+		--sidebar: oklch(0.985 0 0);
+		--sidebar-foreground: oklch(0.145 0 0);
+		--sidebar-primary: oklch(0.205 0 0);
+		--sidebar-primary-foreground: oklch(0.985 0 0);
+		--sidebar-accent: oklch(0.97 0 0);
+		--sidebar-accent-foreground: oklch(0.205 0 0);
+		--sidebar-border: oklch(0.922 0 0);
+		--sidebar-ring: oklch(0.708 0 0);
+	}
+
+	:global(.dark) {
+		--sidebar: oklch(0.205 0 0);
+		--sidebar-foreground: oklch(0.985 0 0);
+		--sidebar-primary: oklch(0.488 0.243 264.376);
+		--sidebar-primary-foreground: oklch(0.985 0 0);
+		--sidebar-accent: oklch(0.269 0 0);
+		--sidebar-accent-foreground: oklch(0.985 0 0);
+		--sidebar-border: oklch(1 0 0 / 10%);
+		--sidebar-ring: oklch(0.439 0 0);
+	}
 </style>
