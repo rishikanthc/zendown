@@ -5,7 +5,7 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-<div class="flex h-screen w-full flex-col dark:bg-gray-900">
+<div class="flex w-full flex-col dark:bg-gray-900">
 	<header class="sticky top-0 right-0 z-20 px-4 py-3 sm:px-6">
 		<a
 			href="/"
@@ -15,7 +15,7 @@
 		</a>
 	</header>
 
-	<div class="overflow-y-auto">
-		<NotePanel initialContent={data.note.content} />
-	</div>
+	<!-- <div class="flex-grow"> -->
+	<NotePanel initialContent={data.note.content} />
+	<!-- </div> -->
 </div>

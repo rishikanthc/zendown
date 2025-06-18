@@ -24,16 +24,34 @@
 		})()
 	);
 
-	$effect(() => {
-		if (initialContent !== undefined) {
-			noteValue = initialContent;
-		}
-	});
+	// $effect(() => {
+	// 	if (initialContent !== undefined) {
+	// 		noteValue = initialContent;
+	// 	}
+	// });
+
+	let debounceTimer: number | undefined;
 
 	$effect(() => {
+		// Capture noteValue for the closure, as noteValue itself is reactive
+		// and could change before the timeout fires if we don't.
+		const valueToSave = noteValue;
+
 		if (initialContent === undefined && typeof window !== 'undefined' && window.localStorage) {
-			window.localStorage.setItem(localStorageKey, noteValue);
+			// Clear any existing timer
+			clearTimeout(debounceTimer);
+			// Set a new timer
+			debounceTimer = window.setTimeout(() => {
+				window.localStorage.setItem(localStorageKey, valueToSave);
+			}, 500); // 500ms delay, you can adjust this value
 		}
+
+		// Cleanup function for the effect:
+		// This will run when the effect re-runs (due to noteValue changing)
+		// or when the component is unmounted.
+		return () => {
+			clearTimeout(debounceTimer);
+		};
 	});
 
 	let currentMode = $state<'write' | 'preview'>('write');
@@ -135,7 +153,7 @@
 		bind:value={noteValue}
 		disableToolbar={true}
 		theme="tw"
-		scroll="async"
+		scroll="sync"
 		mode="tabs"
 		selectedTab={currentMode}
 	/>
