@@ -257,9 +257,9 @@
 		<AppSidebar />
 	{/if}
 
-	<div class="flex min-h-screen w-full flex-col bg-white dark:bg-gray-900">
+	<div class="flex min-h-screen w-full flex-col bg-white p-2 dark:bg-gray-900">
 		<header
-			class="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6 dark:bg-gray-800"
+			class="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 bg-white px-4 py-3 sm:px-6 dark:bg-gray-800"
 		>
 			<div class="flex flex-shrink-0 items-center gap-2">
 				{#if currentNoteId}
