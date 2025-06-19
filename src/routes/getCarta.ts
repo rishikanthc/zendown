@@ -94,7 +94,11 @@ const callouts: Plugin = {
 // 	// name: "remarkFrontmatterSetup", // Optional name
 // };
 
-export function getCartaInstance(theme: "dark" | "light", forceReinit = false) {
+export function getCartaInstance(
+  theme: "dark" | "light",
+  forceReinit = false,
+  additionalPlugins: Plugin[] = []
+) {
 	if (!cachedCarta || forceReinit) {
 		cachedCarta = new Carta({
 			// theme: theme === "dark" ? min_dark : one_light,
@@ -126,6 +130,7 @@ export function getCartaInstance(theme: "dark" | "light", forceReinit = false) {
 				mermaid,
 				shikicode,
 				anchor(),
+				...additionalPlugins
 			],
 			sanitizer: DOMPurify.sanitize,
 		});

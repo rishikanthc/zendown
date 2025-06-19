@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Carta, MarkdownEditor } from 'carta-md';
+	import { Carta, MarkdownEditor, type Plugin as CartaPlugin } from 'carta-md';
 	import { onMount, onDestroy } from 'svelte';
 	import 'carta-md/default.css';
-	import { Eye, Pencil, Menu } from 'lucide-svelte';
+	import { Eye, Pencil, Menu, Save } from 'lucide-svelte';
 	import { getCartaInstance } from './getCarta';
 	import './tw.css';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -22,6 +22,10 @@
 	let isLoadingRelatedNotes = $state(false);
 	let relatedNotesError = $state<string | null>(null);
 
+	let isDirty = $state(false);
+	const AUTO_SAVE_INTERVAL = 3000; // 3 seconds
+	let autoSaveTimer: number | undefined;
+
 	let {
 		key,
 		initialContent,
@@ -36,7 +40,19 @@
 
 	let currentNoteId = $state(initialId);
 
-	const carta = getCartaInstance('light');
+	const changeListenerPlugin: CartaPlugin = {
+		listeners: [
+			[
+				'input', // Listen to the 'input' event on the textarea element within Carta
+				() => {
+					console.log('Carta input detected, setting isDirty = true');
+					isDirty = true;
+				}
+			]
+		]
+	};
+
+	const carta = getCartaInstance('light', false, [changeListenerPlugin]);
 	const localStorageKey = 'carta-editor-content';
 
 	const defaultNewNoteValue = '# Start typing your title here\n\nAnd your content below...';
@@ -89,18 +105,19 @@
 		return null;
 	}
 
-	async function saveNote() {
+	async function saveNote(options?: { isAutoSave?: boolean }): Promise<boolean> {
 		const title = extractTitleFromMarkdown(noteValue);
+		const isAutoSave = options?.isAutoSave ?? false;
 
 		if (!title) {
 			const message =
 				'Error: A title (H1 heading, e.g., "# Your Title") is required to save the note.';
 			saveStatusMessage = message;
-			if (typeof window !== 'undefined') window.alert(message);
+			if (!isAutoSave && typeof window !== 'undefined') window.alert(message);
 			setTimeout(() => {
 				if (saveStatusMessage === message) saveStatusMessage = '';
 			}, 5000);
-			return;
+			return false;
 		}
 
 		saveStatusMessage = 'Saving...';
@@ -148,24 +165,32 @@
 						await onNoteCreated(responseData);
 					}
 				}
+				isDirty = false; // Reset dirty flag on successful save
+				// Clear success message after a delay
+				setTimeout(() => {
+					if (saveStatusMessage === successMessage) saveStatusMessage = '';
+				}, 3000); // Keep success message for 3 seconds
+				return true;
 			} else {
 				const errorMessage = `Error saving note: ${responseData.message || response.statusText || 'Unknown server error.'}`;
 				saveStatusMessage = errorMessage;
-				if (typeof window !== 'undefined') window.alert(errorMessage);
+				if (!isAutoSave && typeof window !== 'undefined') window.alert(errorMessage);
+				// Clear error message after a delay
+				setTimeout(() => {
+					if (saveStatusMessage === errorMessage) saveStatusMessage = '';
+				}, 5000);
+				return false;
 			}
 		} catch (error: any) {
 			console.error('Failed to save note:', error);
 			const networkErrorMessage = `Failed to save note: ${error?.message || 'A network or client-side error occurred.'}`;
 			saveStatusMessage = networkErrorMessage;
-			if (typeof window !== 'undefined') window.alert(networkErrorMessage);
-		}
-
-		const titleRequiredErrorMessage =
-			'Error: A title (H1 heading, e.g., "# Your Title") is required to save the note.';
-		if (saveStatusMessage !== titleRequiredErrorMessage) {
+			if (!isAutoSave && typeof window !== 'undefined') window.alert(networkErrorMessage);
+			// Clear network error message after a delay
 			setTimeout(() => {
-				if (saveStatusMessage !== titleRequiredErrorMessage) saveStatusMessage = '';
+				if (saveStatusMessage === networkErrorMessage) saveStatusMessage = '';
 			}, 5000);
+			return false;
 		}
 	}
 
@@ -250,6 +275,38 @@
 			relatedNotesError = null;
 		}
 	});
+
+	// Auto-save effect
+	$effect(() => {
+		if (typeof window !== 'undefined') {
+			// Clear any existing timer when the effect re-runs or component unmounts
+			if (autoSaveTimer) {
+				clearInterval(autoSaveTimer);
+				autoSaveTimer = undefined;
+			}
+
+			autoSaveTimer = window.setInterval(async () => {
+				// console.log(`Auto-save interval. isDirty: ${isDirty}`);
+				if (isDirty) {
+					console.log('Auto-save: Document is dirty, attempting to save...');
+					const saved = await saveNote({ isAutoSave: true });
+					if (saved) {
+						// console.log('Auto-save: Note saved successfully.');
+					} else {
+						// console.log('Auto-save: Save attempt failed or note was not ready to save (e.g., no title).');
+					}
+				}
+			}, AUTO_SAVE_INTERVAL);
+
+			// Cleanup function for the effect
+			return () => {
+				if (autoSaveTimer) {
+					clearInterval(autoSaveTimer);
+					autoSaveTimer = undefined;
+				}
+			};
+		}
+	});
 </script>
 
 <Sidebar.Provider>
@@ -282,19 +339,42 @@
 					Back to Notes
 				</a>
 			</div>
-			<Button
-				onclick={togglePreviewMode}
-				variant="secondary"
-				size="icon"
-				title="Toggle edit/preview (Ctrl+P or Cmd+P)"
-				class="flex-shrink-0"
-			>
-				{#if currentMode === 'write'}
-					<Eye stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
-				{:else}
-					<Pencil stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
-				{/if}
-			</Button>
+			<div class="flex items-center gap-2">
+				<div class="relative">
+					<Button
+						on:click={saveNote}
+						variant="secondary"
+						size="icon"
+						title="Save note (Ctrl+S or Cmd+S)"
+						class="flex-shrink-0"
+					>
+						<Save stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
+					</Button>
+					{#if isDirty}
+						<span
+							class="absolute top-0 right-0 -mt-1 -mr-1 flex h-3 w-3 items-center justify-center rounded-full bg-magenta-600 ring-2 ring-white dark:ring-gray-800"
+							title="Unsaved changes"
+						>
+							<span class="sr-only">Unsaved changes</span>
+						</span>
+					{/if}
+				</div>
+
+
+				<Button
+					onclick={togglePreviewMode}
+					variant="secondary"
+					size="icon"
+					title="Toggle edit/preview (Ctrl+P or Cmd+P)"
+					class="flex-shrink-0"
+				>
+					{#if currentMode === 'write'}
+						<Eye stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
+					{:else}
+						<Pencil stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
+					{/if}
+				</Button>
+			</div>
 		</header>
 
 		<div
