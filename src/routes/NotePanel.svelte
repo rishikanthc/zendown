@@ -260,7 +260,7 @@
 
 		<!-- Editor Wrapper (Centering & Max Width) -->
 		<div
-			class="prose prose-base dark:prose-invert mx-auto w-full max-w-[800px] px-4 py-6 text-gray-800 sm:px-2 dark:text-gray-100"
+			class="prose prose-base dark:prose-invert prose-headings:text-gray-800 mx-auto w-full max-w-[800px] px-4 py-6 text-gray-700 sm:px-2 dark:text-gray-100"
 		>
 			<MarkdownEditor
 				{carta}

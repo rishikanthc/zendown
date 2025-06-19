@@ -113,7 +113,7 @@
 <div class="min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
 	<header class="m-0 w-full bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
 		<div class="flex w-full items-center justify-between">
-			<h1 class="text-3xl font-semibold text-blue-600 dark:text-blue-400">Zendown</h1>
+			<h1 class="font-[Megrim] text-3xl text-blue-600 dark:text-blue-400">ZenDown</h1>
 			<Button onclick={openNewNoteModal} class="bg-blue-600 text-white hover:bg-blue-700"
 				>New Note</Button
 			>
