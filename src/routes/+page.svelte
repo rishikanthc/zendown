@@ -15,7 +15,6 @@
 		AlertDialogTitle
 	} from '$lib/components/ui/alert-dialog/index.js';
 	import { Trash2 } from 'lucide-svelte';
-	import SemanticSearchDialog from '$lib/components/ui/semantic-search-dialog/SemanticSearchDialog.svelte';
 
 	// Define the type for a single note based on your PageData structure
 	// This assumes data.notes is an array of objects with at least id, title, canonical_path
@@ -32,8 +31,6 @@
 	let noteTitleToDelete = $state<string | null>(null);
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
-
-	let showSemanticSearchDialog = $state(false);
 
 	const localStorageKey = 'carta-editor-content';
 
@@ -55,23 +52,9 @@
 		if (event.key === 'Escape') {
 			if (showNewNoteModal) closeNewNoteModal();
 			if (showDeleteDialog) closeDeleteDialog();
-			if (showSemanticSearchDialog) closeSemanticSearchDialog();
+			// Semantic search dialog escape is handled globally in +layout.svelte
 		}
-		// Handle Cmd+K or Ctrl+K for semantic search
-		if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-			event.preventDefault();
-			openSemanticSearchDialog();
-		}
-	}
-
-	function openSemanticSearchDialog() {
-		showSemanticSearchDialog = true;
-		document.body.classList.add('modal-open'); // Reuse if desired, or manage separately
-	}
-
-	function closeSemanticSearchDialog() {
-		showSemanticSearchDialog = false;
-		document.body.classList.remove('modal-open'); // Reuse if desired
+		// Cmd+K for semantic search is handled globally in +layout.svelte
 	}
 
 	function openDeleteDialog(id: string, title: string) {
@@ -264,10 +247,6 @@
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
-		{/if}
-
-		{#if showSemanticSearchDialog}
-			<SemanticSearchDialog open={showSemanticSearchDialog} onClose={closeSemanticSearchDialog} />
 		{/if}
 	</main>
 </div>
