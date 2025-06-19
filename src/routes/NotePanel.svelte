@@ -11,6 +11,19 @@
 	// Placeholder for the actual type of a newly created note.
 	type NewNoteData = any;
 
+	// Interface for related notes
+	interface RelatedNote {
+		id: string;
+		title: string;
+		canonical_path: string;
+		score: number;
+	}
+
+	// State for related notes
+	let relatedNotes = $state<RelatedNote[]>([]);
+	let isLoadingRelatedNotes = $state(false);
+	let relatedNotesError = $state<string | null>(null);
+
 	let {
 		key,
 		initialContent,
@@ -159,6 +172,28 @@
 		}
 	}
 
+	async function fetchRelatedNotes(noteId: string) {
+		if (!noteId) return;
+		isLoadingRelatedNotes = true;
+		relatedNotesError = null;
+		relatedNotes = []; // Clear previous results
+
+		try {
+			const response = await fetch(`/api/notes/related?id=${noteId}`);
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({ message: response.statusText }));
+				throw new Error(errorData.message || `Failed to fetch related notes: ${response.status}`);
+			}
+			const data = (await response.json()) as RelatedNote[];
+			relatedNotes = data;
+		} catch (err: any) {
+			relatedNotesError = err.message || 'An unknown error occurred while fetching related notes.';
+			console.error('Error fetching related notes:', err);
+		} finally {
+			isLoadingRelatedNotes = false;
+		}
+	}
+
 	function togglePreviewMode() {
 		currentMode = currentMode === 'write' ? 'preview' : 'write';
 	}
@@ -212,6 +247,18 @@
 			} else {
 				noteValue = defaultNewNoteValue;
 			}
+		}
+	});
+
+	// Effect to fetch related notes when in preview mode and currentNoteId is available
+	$effect(() => {
+		if (currentNoteId && currentMode === 'preview') {
+			fetchRelatedNotes(currentNoteId);
+		} else {
+			// Clear related notes when not in preview mode, or no current note ID, or component unmounts
+			relatedNotes = [];
+			isLoadingRelatedNotes = false;
+			relatedNotesError = null;
 		}
 	});
 </script>
@@ -271,8 +318,47 @@
 				mode="tabs"
 				selectedTab={currentMode}
 			/>
-			<div class="h-[300px] w-full"></div>
+			<!-- <div class="h-[300px] w-full"></div> -->
 		</div>
+
+		<!-- Related Notes Section -->
+		{#if currentMode === 'preview' && currentNoteId}
+			<div
+				class="mx-auto w-full max-w-[800px] px-4 py-6 text-gray-700 dark:text-gray-100"
+				role="region"
+				aria-labelledby="related-notes-heading"
+			>
+				<h2
+					id="related-notes-heading"
+					class="mb-3 border-b pb-2 text-xl font-semibold dark:border-gray-700"
+				>
+					Related Notes
+				</h2>
+				{#if isLoadingRelatedNotes}
+					<p>Loading related notes...</p>
+				{:else if relatedNotesError}
+					<p class="text-red-500 dark:text-red-400">Error: {relatedNotesError}</p>
+				{:else if relatedNotes.length > 0}
+					<ul class="list-none space-y-2 pl-0 md:list-disc md:space-y-1 md:pl-5">
+						{#each relatedNotes as note}
+							<li>
+								<a
+									href="/{note.canonical_path}"
+									class="text-blue-600 hover:underline dark:text-blue-400"
+								>
+									{note.title}
+								</a>
+								<span class="text-sm text-gray-500 dark:text-gray-400">
+									(Score: {note.score.toFixed(3)})
+								</span>
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<p>No related notes found.</p>
+				{/if}
+			</div>
+		{/if}
 
 		<!-- Footer -->
 		<footer class="fixed right-0 bottom-0 z-30 flex items-center justify-end px-4 py-2 sm:px-6">

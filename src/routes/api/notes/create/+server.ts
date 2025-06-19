@@ -99,6 +99,48 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ message: 'Failed to create new note due to an unexpected server error.' }, { status: 500 });
 		}
 
+		// Attempt to upsert the document to the AI vector server
+		if (insertedResult && insertedResult.id && typeof insertedResult.content === 'string') {
+			try {
+				const aiUpsertPayload = {
+					id: insertedResult.id,
+					content: insertedResult.content
+				};
+				const aiServerUrl = 'http://localhost:8000/api/upsert/'; // Consider making this an environment variable
+
+				// console.log(`Attempting to upsert to AI: ${JSON.stringify(aiUpsertPayload)} at ${aiServerUrl}`);
+
+				const aiResponse = await fetch(aiServerUrl, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(aiUpsertPayload)
+				});
+
+				if (!aiResponse.ok) {
+					// Log error from AI server but don't fail the main operation
+					const errorText = await aiResponse.text();
+					console.error(
+						`AI Server Upsert Error for note ${insertedResult.id}: ${aiResponse.status} - ${errorText}`
+					);
+				} else {
+					// const responseData = await aiResponse.json();
+					console.log(
+						`Successfully upserted note ${insertedResult.id} to AI server.`
+					);
+				}
+			} catch (aiError) {
+				// Log network or other errors calling AI server but don't fail the main operation
+				console.error(
+					`Failed to call AI server for upserting note ${insertedResult.id}:`,
+					aiError
+				);
+			}
+		} else {
+			console.warn(`Could not upsert note to AI server: insertedResult or its properties (id, content) are missing or invalid. ID: ${insertedResult?.id}`);
+		}
+
 		return json(insertedResult, { status: 201 });
 	} catch (error: any) {
 		console.error('Error creating note:', error);
