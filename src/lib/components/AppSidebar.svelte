@@ -61,10 +61,10 @@
 	// in the parent, onMount will run each time it's "loaded into view".
 </script>
 
-<Sidebar.Root side="left" collapsible="offcanvas" class="border-none bg-gray-50">
+<Sidebar.Root side="left" collapsible="offcanvas" class="border-none bg-gray-50 dark:bg-gray-800">
 	<Sidebar.Header class="p-3">
 		<Sidebar.Group>
-			<Sidebar.GroupLabel class="font-[Megrim] text-2xl text-blue-600 dark:text-gray-100"
+			<Sidebar.GroupLabel class="font-[Megrim] text-xl text-blue-600 sm:text-2xl dark:text-gray-100"
 				>ZenDown</Sidebar.GroupLabel
 			>
 		</Sidebar.Group>
@@ -76,45 +76,44 @@
 				<Sidebar.Menu>
 					{#each Array(5) as _, i (i)}
 						<Sidebar.MenuItem>
-							<Sidebar.MenuSkeleton class="my-1 h-8" />
+							<Sidebar.MenuSkeleton class="my-1 h-7 sm:h-8" />
 						</Sidebar.MenuItem>
 					{/each}
 				</Sidebar.Menu>
 			{:else if errorMessage}
 				<div
-					class="my-2 rounded-md bg-red-100 p-3 text-sm text-red-700 dark:bg-red-900 dark:text-red-300"
+					class="my-2 rounded-md bg-red-100 p-2 text-xs text-red-700 sm:p-3 sm:text-sm dark:bg-red-900 dark:text-red-300"
 					role="alert"
 				>
 					<p class="font-medium">Error loading notes:</p>
 					<p>{errorMessage}</p>
 					<button
 						onclick={fetchNotes}
-						class="mt-2 text-sm font-medium text-red-700 hover:underline dark:text-red-300"
+						class="mt-2 text-xs font-medium text-red-700 hover:underline sm:text-sm dark:text-red-300"
 					>
 						Try again
 					</button>
 				</div>
 			{:else if notes.length === 0}
-				<div class="my-2 p-3 text-center text-sm text-gray-500 dark:text-gray-400">
+				<div class="my-2 p-3 text-center text-xs text-gray-500 sm:text-sm dark:text-gray-400">
 					No notes found.
 				</div>
 			{:else}
 				<Sidebar.Menu>
 					{#each notes as note (note.id)}
-						<Sidebar.MenuItem class="my-0 text-sm">
+						<Sidebar.MenuItem class="my-0">
 							<Sidebar.MenuButton
-								class="w-full justify-start p-0 text-sm"
+								class="w-full justify-start p-0 text-xs sm:text-sm"
 								aria-label={`Open note: ${note.title || 'Untitled Note'}`}
 							>
 								{#snippet child({ props: menuButtonProps })}
 									<a
 										href={`${note.canonical_path}`}
 										{...menuButtonProps}
-										class="m-0 flex w-full shrink-0 items-center gap-1 rounded-xs p-1 text-left text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+										class="m-0 flex w-full shrink-0 items-center gap-1 rounded-xs p-0.5 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
 									>
-										<File class="h-4 w-4 shrink-0" />
-										<!-- <FileText class="h-4 w-4 flex-shrink-0 text-gray-600 dark:text-gray-400" /> -->
-										<span class="truncate text-gray-600 dark:text-gray-300">
+										<File class="h-3 w-3 shrink-0 sm:h-4 sm:w-4" />
+										<span class="truncate">
 											{note.title || 'Untitled Note'}
 										</span>
 									</a>

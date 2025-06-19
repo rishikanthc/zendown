@@ -1,17 +1,16 @@
 <script lang="ts">
 	import { Carta, MarkdownEditor } from 'carta-md';
-	import { onMount, onDestroy } from 'svelte'; // Removed unused 'tick'
+	import { onMount, onDestroy } from 'svelte';
 	import 'carta-md/default.css';
-	import { Eye, Pencil, Menu } from 'lucide-svelte'; // Added Menu icon
+	import { Eye, Pencil, Menu } from 'lucide-svelte';
 	import { getCartaInstance } from './getCarta';
-	import './tw.css'; // Ensure Tailwind is processed for this component
+	import './tw.css';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js'; // Added for Sidebar
-	import AppSidebar from '../lib/components/AppSidebar.svelte'; // Added AppSidebar component
-	// Placeholder for the actual type of a newly created note.
+	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import AppSidebar from '../lib/components/AppSidebar.svelte';
+
 	type NewNoteData = any;
 
-	// Interface for related notes
 	interface RelatedNote {
 		id: string;
 		title: string;
@@ -19,7 +18,6 @@
 		score: number;
 	}
 
-	// State for related notes
 	let relatedNotes = $state<RelatedNote[]>([]);
 	let isLoadingRelatedNotes = $state(false);
 	let relatedNotesError = $state<string | null>(null);
@@ -38,7 +36,7 @@
 
 	let currentNoteId = $state(initialId);
 
-	const carta = getCartaInstance('light'); // Assuming 'light' or a theme that adapts
+	const carta = getCartaInstance('light');
 	const localStorageKey = 'carta-editor-content';
 
 	const defaultNewNoteValue = '# Start typing your title here\n\nAnd your content below...';
@@ -98,7 +96,6 @@
 			const message =
 				'Error: A title (H1 heading, e.g., "# Your Title") is required to save the note.';
 			saveStatusMessage = message;
-			// Consider a less intrusive notification system if window.alert is not preferred
 			if (typeof window !== 'undefined') window.alert(message);
 			setTimeout(() => {
 				if (saveStatusMessage === message) saveStatusMessage = '';
@@ -176,7 +173,7 @@
 		if (!noteId) return;
 		isLoadingRelatedNotes = true;
 		relatedNotesError = null;
-		relatedNotes = []; // Clear previous results
+		relatedNotes = [];
 
 		try {
 			const response = await fetch(`/api/notes/related?id=${noteId}`);
@@ -212,11 +209,9 @@
 		if (typeof window !== 'undefined') {
 			window.addEventListener('keydown', handleKeyDown);
 		}
-		// Refresh UI if initialContent is empty, to ensure placeholder is shown if necessary
 		if (initialContent === '' && noteValue !== defaultNewNoteValue) {
 			noteValue = defaultNewNoteValue;
 		} else if (initialContent && noteValue !== initialContent) {
-			// Ensure initialContent from prop is respected if it changed
 			noteValue = initialContent;
 		}
 
@@ -228,20 +223,16 @@
 		};
 	});
 
-	// React to prop changes for initialContent and id
 	$effect(() => {
 		if (initialId !== undefined) {
 			currentNoteId = initialId;
 		}
 		if (initialContent !== undefined) {
 			noteValue = initialContent;
-			// If initialContent means it's a saved note, clear local storage for new notes.
 			if (currentNoteId && typeof window !== 'undefined' && window.localStorage) {
 				window.localStorage.removeItem(localStorageKey);
 			}
 		} else if (currentNoteId === undefined) {
-			// If we switched to a "new note" view (no id, no initialContent)
-			// load from local storage or use default.
 			if (typeof window !== 'undefined' && window.localStorage) {
 				noteValue = window.localStorage.getItem(localStorageKey) ?? defaultNewNoteValue;
 			} else {
@@ -250,12 +241,10 @@
 		}
 	});
 
-	// Effect to fetch related notes when in preview mode and currentNoteId is available
 	$effect(() => {
 		if (currentNoteId && currentMode === 'preview') {
 			fetchRelatedNotes(currentNoteId);
 		} else {
-			// Clear related notes when not in preview mode, or no current note ID, or component unmounts
 			relatedNotes = [];
 			isLoadingRelatedNotes = false;
 			relatedNotesError = null;
@@ -269,14 +258,18 @@
 	{/if}
 
 	<div class="flex min-h-screen w-full flex-col bg-white dark:bg-gray-900">
-		<!-- Header -->
 		<header
-			class="sticky top-0 z-30 flex items-center justify-between px-4 py-3 sm:px-6 dark:bg-gray-800"
+			class="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6 dark:bg-gray-800"
 		>
-			<div class="flex items-center gap-2">
+			<div class="flex flex-shrink-0 items-center gap-2">
 				{#if currentNoteId}
 					<Sidebar.Trigger asChild>
-						<Button variant="secondary" size="icon" title="Toggle Sidebar (Ctrl+B or Cmd+B)">
+						<Button
+							variant="secondary"
+							size="icon"
+							title="Toggle Sidebar (Ctrl+B or Cmd+B)"
+							class="flex-shrink-0"
+						>
 							<Menu class="h-5 w-5" />
 							<span class="sr-only">Toggle navigation sidebar</span>
 						</Button>
@@ -284,9 +277,8 @@
 				{/if}
 				<a
 					href="/"
-					class="rounded-0 inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none dark:text-gray-200 dark:hover:bg-gray-700"
+					class="rounded-0 inline-flex flex-shrink-0 items-center px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none dark:text-gray-200 dark:hover:bg-gray-700"
 				>
-					<!-- &larr;  -->
 					Back to Notes
 				</a>
 			</div>
@@ -295,20 +287,18 @@
 				variant="secondary"
 				size="icon"
 				title="Toggle edit/preview (Ctrl+P or Cmd+P)"
+				class="flex-shrink-0"
 			>
 				{#if currentMode === 'write'}
-					<Eye stroke-width={2} class="rounded-sm" />
+					<Eye stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
 				{:else}
-					<Pencil stroke-width={2} class="rounded-sm" />
+					<Pencil stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
 				{/if}
 			</Button>
 		</header>
 
-		<!-- Main Content Area (Scrollable) -->
-
-		<!-- Editor Wrapper (Centering & Max Width) -->
 		<div
-			class="prose prose-base dark:prose-invert prose-headings:font-[Space_Grotesk] prose-headings:text-gray-800 mx-auto w-full max-w-[800px] px-4 py-6 font-[Noto_Sans] text-gray-700 sm:px-2 dark:text-gray-100"
+			class="prose prose-base dark:prose-invert prose-headings:font-[Space_Grotesk] prose-headings:text-gray-800 mx-auto w-full max-w-[800px] flex-grow px-2 py-4 font-[Noto_Sans] text-gray-700 sm:px-4 md:px-6 md:py-6 dark:text-gray-100"
 		>
 			<MarkdownEditor
 				{carta}
@@ -319,28 +309,30 @@
 				mode="tabs"
 				selectedTab={currentMode}
 			/>
-			<!-- <div class="h-[300px] w-full"></div> -->
 		</div>
 
-		<!-- Related Notes Section -->
 		{#if currentMode === 'preview' && currentNoteId}
 			<div
-				class="mx-auto w-full max-w-[800px] px-4 py-6 text-gray-700 dark:text-gray-100"
+				class="mx-auto w-full max-w-[800px] px-2 py-4 text-gray-700 sm:px-4 md:px-6 md:py-6 dark:text-gray-100"
 				role="region"
 				aria-labelledby="related-notes-heading"
 			>
 				<h2
 					id="related-notes-heading"
-					class="mb-3 border-b pb-2 font-[Space_Grotesk] text-xl font-semibold dark:border-gray-700"
+					class="mb-3 border-b pb-2 font-[Space_Grotesk] text-lg font-semibold sm:text-xl dark:border-gray-700"
 				>
 					Related Notes
 				</h2>
 				{#if isLoadingRelatedNotes}
-					<p>Loading related notes...</p>
+					<p class="text-sm sm:text-base">Loading related notes...</p>
 				{:else if relatedNotesError}
-					<p class="text-red-500 dark:text-red-400">Error: {relatedNotesError}</p>
+					<p class="text-sm text-red-500 sm:text-base dark:text-red-400">
+						Error: {relatedNotesError}
+					</p>
 				{:else if relatedNotes.length > 0}
-					<ul class="list-none space-y-2 pl-0 md:list-disc md:space-y-1 md:pl-5">
+					<ul
+						class="list-none space-y-2 pl-0 text-sm sm:text-base md:list-disc md:space-y-1 md:pl-5"
+					>
 						{#each relatedNotes as note}
 							<li>
 								<a
@@ -349,27 +341,27 @@
 								>
 									{note.title}
 								</a>
-								<span class="text-sm text-gray-500 dark:text-gray-400">
+								<span class="ml-1 text-xs text-gray-500 sm:text-sm dark:text-gray-400">
 									(Score: {note.score.toFixed(3)})
 								</span>
 							</li>
 						{/each}
 					</ul>
 				{:else}
-					<p>No related notes found.</p>
+					<p class="text-sm sm:text-base">No related notes found.</p>
 				{/if}
 			</div>
 		{/if}
 
-		<!-- Footer -->
-		<footer class="fixed right-0 bottom-0 z-30 flex items-center justify-end px-4 py-2 sm:px-6">
-			<div class="text-sm text-gray-600 dark:text-gray-400">Word Count: {wordCount}</div>
+		<footer
+			class="fixed right-0 bottom-0 z-30 flex items-center justify-end px-2 py-1 text-xs sm:px-4 sm:py-2 sm:text-sm"
+		>
+			<div class="text-gray-600 dark:text-gray-400">Word Count: {wordCount}</div>
 		</footer>
 
-		<!-- Save Status Message -->
 		{#if saveStatusMessage}
 			<div
-				class="fixed right-5 bottom-16 z-[100] rounded-md px-4 py-3 text-sm font-medium shadow-lg sm:bottom-[calc(theme(height.10)_+_1.25rem)] md:bottom-16"
+				class="fixed right-2 bottom-12 z-[100] rounded-md px-3 py-2 text-xs font-medium shadow-lg sm:right-5 sm:bottom-16 sm:px-4 sm:py-3 sm:text-sm md:bottom-[calc(theme(spacing.10)_+_0.5rem)] lg:bottom-16"
 				class:text-white={true}
 				class:bg-blue-600={saveStatusMessage.startsWith('Saving') ||
 					saveStatusMessage.includes('successfully')}
@@ -387,36 +379,13 @@
 </Sidebar.Provider>
 
 <style>
-	/* Styles from the original component, if any specific ones are needed beyond Tailwind. */
-	/* For Carta in dark mode, if not handled by 'tw' theme or prose-invert */
-
 	@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Serif:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Noto+Sans+Mono:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
 	@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-	/*
-    These CSS variables are for theming the shadcn-svelte sidebar.
-    Ideally, these should be in your global app.css or a similar global stylesheet.
-    The `npx shadcn-svelte@latest add sidebar` command should handle this.
-    Adding them here as per instruction to modify only NotePanel.svelte.
-  */
-	/* :global(:root) {
-		--sidebar: oklch(0.985 0 0);
-		--sidebar-foreground: oklch(0.145 0 0);
-		--sidebar-primary: oklch(0.205 0 0);
-		--sidebar-primary-foreground: oklch(0.985 0 0);
-		--sidebar-accent: oklch(0.97 0 0);
-		--sidebar-accent-foreground: oklch(0.205 0 0);
-		--sidebar-border: oklch(0.922 0 0);
-		--sidebar-ring: oklch(0.708 0 0);
-	}
 
-	:global(.dark) {
-		--sidebar: oklch(0.205 0 0);
-		--sidebar-foreground: oklch(0.985 0 0);
-		--sidebar-primary: oklch(0.488 0.243 264.376);
-		--sidebar-primary-foreground: oklch(0.985 0 0);
-		--sidebar-accent: oklch(0.269 0 0);
-		--sidebar-accent-foreground: oklch(0.985 0 0);
-		--sidebar-border: oklch(1 0 0 / 10%);
-		--sidebar-ring: oklch(0.439 0 0);
-	} */
+	/* Ensure the main content area can grow to fill available space, especially if related notes are not shown */
+	.prose {
+		/* A fallback min-height. Adjust based on your header/footer/other fixed elements' combined height. */
+		/* This helps prevent a very short editor on large screens if content is minimal. */
+		min-height: calc(100vh - theme('spacing.32')); /* Example: 32 = 8rem, adjust as needed */
+	}
 </style>

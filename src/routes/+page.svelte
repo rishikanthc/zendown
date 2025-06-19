@@ -40,12 +40,12 @@
 		}
 		newNotePanelKey += 1;
 		showNewNoteModal = true;
-		document.body.classList.add('modal-open');
+		if (typeof document !== 'undefined') document.body.classList.add('modal-open');
 	}
 
 	function closeNewNoteModal() {
 		showNewNoteModal = false;
-		document.body.classList.remove('modal-open');
+		if (typeof document !== 'undefined') document.body.classList.remove('modal-open');
 	}
 
 	function handleGlobalKeyDown(event: KeyboardEvent) {
@@ -62,14 +62,14 @@
 		noteTitleToDelete = title;
 		deleteError = null;
 		showDeleteDialog = true;
-		document.body.classList.add('modal-open');
+		if (typeof document !== 'undefined') document.body.classList.add('modal-open');
 	}
 
 	function closeDeleteDialog() {
 		showDeleteDialog = false;
 		noteIdToDelete = null;
 		noteTitleToDelete = null;
-		document.body.classList.remove('modal-open');
+		if (typeof document !== 'undefined') document.body.classList.remove('modal-open');
 	}
 
 	async function handleDeleteConfirm() {
@@ -85,12 +85,14 @@
 			} else {
 				const errorResult = await response.json();
 				deleteError = errorResult.message || `Failed to delete note (status: ${response.status}).`;
-				closeDeleteDialog(); // Close dialog to show error on main page
+				// Keep dialog open to show error or close and show on main page:
+				// For now, closing to show on main page as per original logic.
+				closeDeleteDialog();
 			}
 		} catch (error) {
 			console.error('Error deleting note:', error);
 			deleteError = 'An unexpected error occurred while deleting the note.';
-			closeDeleteDialog(); // Close dialog on unexpected error too
+			closeDeleteDialog();
 		} finally {
 			isDeleting = false;
 		}
@@ -105,25 +107,31 @@
 	}
 
 	onMount(() => {
-		window.addEventListener('keydown', handleGlobalKeyDown);
+		if (typeof window !== 'undefined') {
+			window.addEventListener('keydown', handleGlobalKeyDown);
+		}
 		return () => {
-			window.removeEventListener('keydown', handleGlobalKeyDown);
+			if (typeof window !== 'undefined') {
+				window.removeEventListener('keydown', handleGlobalKeyDown);
+			}
 		};
 	});
 </script>
 
 <div class="min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
-	<header class="m-0 w-full bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-		<div class="flex w-full items-center justify-between">
-			<h1 class="font-[Megrim] text-3xl text-blue-600 dark:text-blue-400">ZenDown</h1>
-			<Button onclick={openNewNoteModal} variant="ghost">New Note</Button>
+	<header class="m-0 w-full bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
+		<div class="container mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
+			<h1 class="font-[Megrim] text-2xl text-blue-600 sm:text-3xl dark:text-blue-400">ZenDown</h1>
+			<Button onclick={openNewNoteModal} variant="ghost" size="sm" class="sm:size-md"
+				>New Note</Button
+			>
 		</div>
 	</header>
 
-	<main class="container mx-auto max-w-[684px] p-6">
+	<main class="container mx-auto max-w-4xl p-4 sm:p-6">
 		{#if data.error}
 			<div
-				class="my-4 rounded border border-red-400 bg-red-100 p-4 text-red-700 dark:border-red-600 dark:bg-red-900 dark:text-red-200"
+				class="my-4 rounded border border-red-400 bg-red-100 p-3 text-sm text-red-700 sm:p-4 sm:text-base dark:border-red-600 dark:bg-red-900 dark:text-red-200"
 			>
 				<p><strong>Error loading notes:</strong> {data.error}</p>
 			</div>
@@ -131,37 +139,39 @@
 
 		{#if deleteError}
 			<div
-				class="my-4 rounded border border-red-400 bg-red-100 p-4 text-red-700 dark:border-red-600 dark:bg-red-900 dark:text-red-200"
+				class="my-4 rounded border border-red-400 bg-red-100 p-3 text-sm text-red-700 sm:p-4 sm:text-base dark:border-red-600 dark:bg-red-900 dark:text-red-200"
 			>
 				<p><strong>Error deleting note:</strong> {deleteError}</p>
 			</div>
 		{/if}
 
 		{#if data.notes && data.notes.length > 0}
-			<ul class="mt-4">
+			<ul class="mt-4 space-y-0">
 				{#each data.notes as note (note.id)}
-					<li class="group flex items-center justify-between p-0 transition-all hover:shadow-sm">
+					<li
+						class="group flex items-center justify-between rounded-md p-0 transition-all hover:bg-gray-50 hover:shadow-sm dark:hover:bg-gray-800/50"
+					>
 						<a
 							href="/{note.canonical_path}"
-							class="px-2 font-[Space_Grotesk] text-base text-gray-800 hover:text-blue-600 hover:underline dark:text-gray-200"
+							class="block flex-grow truncate px-2 py-1 font-[Space_Grotesk] text-sm text-gray-800 hover:text-blue-600 hover:underline sm:text-base dark:text-gray-200"
 						>
-							{note.title}
+							{note.title || 'Untitled Note'}
 						</a>
 						<Button
 							variant="ghost"
 							size="icon"
-							class="text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-600 focus:opacity-100 dark:text-gray-400 dark:hover:text-red-500"
-							onclick={() => openDeleteDialog(note.id, note.title)}
+							class="mr-1 flex-shrink-0 text-gray-500 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:text-red-600 focus:opacity-100 dark:text-gray-400 dark:hover:text-red-500"
+							onclick={() => openDeleteDialog(note.id, note.title || 'Untitled Note')}
 							aria-label="Delete note"
 						>
-							<Trash2 class="h-5 w-5" />
+							<Trash2 class="h-4 w-4 sm:h-5 sm:w-5" />
 						</Button>
 					</li>
 				{/each}
 			</ul>
 		{:else if !data.error && !(data.notes && data.notes.length > 0)}
 			<div class="py-12 text-center">
-				<p class="text-xl text-gray-600 dark:text-gray-400">
+				<p class="text-lg text-gray-600 sm:text-xl dark:text-gray-400">
 					No notes found. Click "New Note" to start writing your thoughts.
 				</p>
 			</div>
@@ -169,7 +179,7 @@
 
 		{#if showNewNoteModal}
 			<div
-				class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+				class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-2 backdrop-blur-sm sm:p-4"
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="new-note-panel-title"
@@ -179,11 +189,12 @@
 				onclick={closeNewNoteModal}
 			>
 				<div
-					class="h-full max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-gray-800"
+					class="h-full max-h-[95vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-2xl sm:max-h-[90vh] dark:bg-gray-800"
 					onclick={(event) => event.stopPropagation()}
 				>
 					<div class="flex h-full flex-col">
 						<div class="flex-grow overflow-y-auto">
+							<!-- NotePanel itself is now responsive -->
 							<NotePanel key={newNotePanelKey} onNoteCreated={handleNoteCreated} />
 						</div>
 					</div>
@@ -198,23 +209,25 @@
 					if (!open) closeDeleteDialog();
 				}}
 			>
-				<AlertDialogContent>
+				<AlertDialogContent class="w-[90vw] max-w-md rounded-lg sm:w-full">
 					<AlertDialogHeader>
-						<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-						<AlertDialogDescription>
+						<AlertDialogTitle class="text-lg sm:text-xl">Are you absolutely sure?</AlertDialogTitle>
+						<AlertDialogDescription class="text-sm sm:text-base">
 							This action cannot be undone. This will permanently delete the note titled "<strong
 								>{noteTitleToDelete || 'Selected Note'}</strong
 							>".
 						</AlertDialogDescription>
 					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel onclick={closeDeleteDialog} disabled={isDeleting}
-							>Cancel</AlertDialogCancel
+					<AlertDialogFooter class="flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:space-x-2">
+						<AlertDialogCancel
+							onclick={closeDeleteDialog}
+							disabled={isDeleting}
+							class="w-full sm:w-auto">Cancel</AlertDialogCancel
 						>
 						<AlertDialogAction
 							onclick={handleDeleteConfirm}
 							disabled={isDeleting}
-							class="bg-red-600 text-white hover:bg-red-700"
+							class="w-full bg-red-600 text-white hover:bg-red-700 sm:w-auto"
 						>
 							{#if isDeleting}
 								<svg
