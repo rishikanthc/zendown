@@ -217,7 +217,9 @@
 </script>
 
 <Sidebar.Provider>
-	<AppSidebar />
+	{#if currentNoteId}
+		<AppSidebar />
+	{/if}
 
 	<div class="flex min-h-screen w-full flex-col bg-white dark:bg-gray-900">
 		<!-- Header -->
@@ -225,12 +227,14 @@
 			class="sticky top-0 z-30 flex items-center justify-between px-4 py-3 sm:px-6 dark:bg-gray-800"
 		>
 			<div class="flex items-center gap-2">
-				<Sidebar.Trigger asChild>
-					<Button variant="secondary" size="icon" title="Toggle Sidebar (Ctrl+B or Cmd+B)">
-						<Menu class="h-5 w-5" />
-						<span class="sr-only">Toggle navigation sidebar</span>
-					</Button>
-				</Sidebar.Trigger>
+				{#if currentNoteId}
+					<Sidebar.Trigger asChild>
+						<Button variant="secondary" size="icon" title="Toggle Sidebar (Ctrl+B or Cmd+B)">
+							<Menu class="h-5 w-5" />
+							<span class="sr-only">Toggle navigation sidebar</span>
+						</Button>
+					</Sidebar.Trigger>
+				{/if}
 				<a
 					href="/"
 					class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none dark:text-gray-200 dark:hover:bg-gray-700"
@@ -255,43 +259,44 @@
 		<!-- Main Content Area (Scrollable) -->
 
 		<!-- Editor Wrapper (Centering & Max Width) -->
-	<div
-		class="prose prose-base dark:prose-invert mx-auto h-full w-full max-w-[800px] px-4 py-6 text-gray-800 sm:px-2 dark:text-gray-100"
-	>
-		<MarkdownEditor
-			{carta}
-			bind:value={noteValue}
-			disableToolbar={true}
-			theme="tw"
-			scroll="sync"
-			mode="tabs"
-			selectedTab={currentMode}
-		/>
-	</div>
-
-	<!-- Footer -->
-	<footer class="fixed right-0 bottom-0 z-30 flex items-center justify-end px-4 py-2 sm:px-6">
-		<div class="text-sm text-gray-600 dark:text-gray-400">Word Count: {wordCount}</div>
-	</footer>
-
-	<!-- Save Status Message -->
-	{#if saveStatusMessage}
 		<div
-			class="fixed right-5 bottom-16 z-[100] rounded-md px-4 py-3 text-sm font-medium shadow-lg sm:bottom-[calc(theme(height.10)_+_1.25rem)] md:bottom-16"
-			class:text-white={true}
-			class:bg-blue-600={saveStatusMessage.startsWith('Saving') ||
-				saveStatusMessage.includes('successfully')}
-			class:bg-red-600={saveStatusMessage.toLowerCase().includes('error')}
-			class:bg-gray-700={!saveStatusMessage.toLowerCase().includes('error') &&
-				!saveStatusMessage.includes('successfully') &&
-				!saveStatusMessage.startsWith('Saving')}
-			role="status"
-			aria-live="polite"
+			class="prose prose-base dark:prose-invert mx-auto w-full max-w-[800px] px-4 py-6 text-gray-800 sm:px-2 dark:text-gray-100"
 		>
-			{saveStatusMessage}
+			<MarkdownEditor
+				{carta}
+				bind:value={noteValue}
+				disableToolbar={true}
+				theme="tw"
+				scroll="sync"
+				mode="tabs"
+				selectedTab={currentMode}
+			/>
+			<div class="h-[300px] w-full"></div>
 		</div>
-	{/if}
-</div>
+
+		<!-- Footer -->
+		<footer class="fixed right-0 bottom-0 z-30 flex items-center justify-end px-4 py-2 sm:px-6">
+			<div class="text-sm text-gray-600 dark:text-gray-400">Word Count: {wordCount}</div>
+		</footer>
+
+		<!-- Save Status Message -->
+		{#if saveStatusMessage}
+			<div
+				class="fixed right-5 bottom-16 z-[100] rounded-md px-4 py-3 text-sm font-medium shadow-lg sm:bottom-[calc(theme(height.10)_+_1.25rem)] md:bottom-16"
+				class:text-white={true}
+				class:bg-blue-600={saveStatusMessage.startsWith('Saving') ||
+					saveStatusMessage.includes('successfully')}
+				class:bg-red-600={saveStatusMessage.toLowerCase().includes('error')}
+				class:bg-gray-700={!saveStatusMessage.toLowerCase().includes('error') &&
+					!saveStatusMessage.includes('successfully') &&
+					!saveStatusMessage.startsWith('Saving')}
+				role="status"
+				aria-live="polite"
+			>
+				{saveStatusMessage}
+			</div>
+		{/if}
+	</div>
 </Sidebar.Provider>
 
 <style>
@@ -300,13 +305,13 @@
 
 	@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Serif:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Noto+Sans+Mono:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
 
-	/* 
+	/*
     These CSS variables are for theming the shadcn-svelte sidebar.
     Ideally, these should be in your global app.css or a similar global stylesheet.
     The `npx shadcn-svelte@latest add sidebar` command should handle this.
     Adding them here as per instruction to modify only NotePanel.svelte.
   */
-	:global(:root) {
+	/* :global(:root) {
 		--sidebar: oklch(0.985 0 0);
 		--sidebar-foreground: oklch(0.145 0 0);
 		--sidebar-primary: oklch(0.205 0 0);
@@ -326,5 +331,5 @@
 		--sidebar-accent-foreground: oklch(0.985 0 0);
 		--sidebar-border: oklch(1 0 0 / 10%);
 		--sidebar-ring: oklch(0.439 0 0);
-	}
+	} */
 </style>
