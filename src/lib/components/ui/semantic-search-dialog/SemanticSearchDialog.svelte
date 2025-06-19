@@ -115,7 +115,7 @@
 {#if open}
 	<div
 		transition:fade={{ duration: 150 }}
-		class="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[15vh] backdrop-blur-sm sm:pt-[20vh]"
+		class="fixed inset-0 z-50 flex items-start justify-center bg-gray-50/60 p-4 pt-[15vh] backdrop-blur-sm sm:pt-[20vh]"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="semantic-search-dialog-title"

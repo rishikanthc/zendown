@@ -284,9 +284,10 @@
 				{/if}
 				<a
 					href="/"
-					class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none dark:text-gray-200 dark:hover:bg-gray-700"
+					class="rounded-0 inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none dark:text-gray-200 dark:hover:bg-gray-700"
 				>
-					&larr; Back to Notes
+					<!-- &larr;  -->
+					Back to Notes
 				</a>
 			</div>
 			<Button
@@ -307,7 +308,7 @@
 
 		<!-- Editor Wrapper (Centering & Max Width) -->
 		<div
-			class="prose prose-base dark:prose-invert prose-headings:text-gray-800 mx-auto w-full max-w-[800px] px-4 py-6 text-gray-700 sm:px-2 dark:text-gray-100"
+			class="prose prose-base dark:prose-invert prose-headings:font-[Space_Grotesk] prose-headings:text-gray-800 mx-auto w-full max-w-[800px] px-4 py-6 font-[Noto_Sans] text-gray-700 sm:px-2 dark:text-gray-100"
 		>
 			<MarkdownEditor
 				{carta}
@@ -330,7 +331,7 @@
 			>
 				<h2
 					id="related-notes-heading"
-					class="mb-3 border-b pb-2 text-xl font-semibold dark:border-gray-700"
+					class="mb-3 border-b pb-2 font-[Space_Grotesk] text-xl font-semibold dark:border-gray-700"
 				>
 					Related Notes
 				</h2>
@@ -344,7 +345,7 @@
 							<li>
 								<a
 									href="/{note.canonical_path}"
-									class="text-blue-600 hover:underline dark:text-blue-400"
+									class="font-[Noto_Sans] text-blue-600 hover:underline dark:text-blue-400"
 								>
 									{note.title}
 								</a>
@@ -390,7 +391,7 @@
 	/* For Carta in dark mode, if not handled by 'tw' theme or prose-invert */
 
 	@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Serif:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Noto+Sans+Mono:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
-
+	@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 	/*
     These CSS variables are for theming the shadcn-svelte sidebar.
     Ideally, these should be in your global app.css or a similar global stylesheet.

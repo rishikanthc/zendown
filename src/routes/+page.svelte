@@ -116,13 +116,11 @@
 	<header class="m-0 w-full bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
 		<div class="flex w-full items-center justify-between">
 			<h1 class="font-[Megrim] text-3xl text-blue-600 dark:text-blue-400">ZenDown</h1>
-			<Button onclick={openNewNoteModal} class="bg-blue-600 text-white hover:bg-blue-700"
-				>New Note</Button
-			>
+			<Button onclick={openNewNoteModal} variant="ghost">New Note</Button>
 		</div>
 	</header>
 
-	<main class="container mx-auto max-w-[784px] p-6">
+	<main class="container mx-auto max-w-[684px] p-6">
 		{#if data.error}
 			<div
 				class="my-4 rounded border border-red-400 bg-red-100 p-4 text-red-700 dark:border-red-600 dark:bg-red-900 dark:text-red-200"
@@ -145,7 +143,7 @@
 					<li class="group flex items-center justify-between p-0 transition-all hover:shadow-sm">
 						<a
 							href="/{note.canonical_path}"
-							class="px-2 text-base text-gray-800 hover:text-blue-600 hover:underline dark:text-gray-200"
+							class="px-2 font-[Space_Grotesk] text-base text-gray-800 hover:text-blue-600 hover:underline dark:text-gray-200"
 						>
 							{note.title}
 						</a>
@@ -252,6 +250,8 @@
 </div>
 
 <style>
+	@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
 	:global(body.modal-open) {
 		overflow: hidden;
 	}
