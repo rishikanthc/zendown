@@ -1,7 +1,7 @@
 # ┌─────────────────────────────────────────────────────────────────────────────┐
 # │ 1. Build stage: install deps + run SvelteKit build                         │
 # └─────────────────────────────────────────────────────────────────────────────┘
-FROM node:18-alpine AS builder
+FROM node:23-alpine AS builder
 WORKDIR /app
 
 # 1a. Copy package.json + lockfile so 'npm ci' can cache layers
@@ -27,7 +27,7 @@ RUN npm run build
 # ┌─────────────────────────────────────────────────────────────────────────────┐
 # │ 2. Runtime stage: install deps (including Drizzle CLI), copy build + config │
 # └─────────────────────────────────────────────────────────────────────────────┘
-FROM node:18-alpine AS runtime
+FROM node:23-alpine AS runtime
 WORKDIR /app
 
 # 2a. Copy package.json & lockfile, then install ALL dependencies (so Drizzle CLI exists)
