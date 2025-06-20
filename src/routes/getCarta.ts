@@ -99,41 +99,41 @@ export function getCartaInstance(
 	forceReinit = false,
 	additionalPlugins: Plugin[] = []
 ) {
-	if (!cachedCarta || forceReinit) {
-		cachedCarta = new Carta({
-			// theme: theme === "dark" ? min_dark : one_light,
-			// shikiOptions: {
-			// 	themes: [one_light, min_dark],
-			// },
-			extensions: [
-				// hideFrontmatter,
-				// cartaHideFrontmatter,
-				// code({
-				// 	inline: "tailing-curly-colon",
-				// 	langs: [
-				// 		"javascript",
-				// 		"docker",
-				// 		"py",
-				// 		"yaml",
-				// 		"toml",
-				// 		"rust",
-				// 		"toml",
-				// 		"shell",
-				// 	],
-				// 	theme: one_light,
-				// }),
-				// cartawiki,
-				// cartaTaskStylesMinimal,
-				// component(mapped, initializeComponents),
-				math(),
-				callouts,
-				mermaid,
-				shikicode,
-				anchor(),
-				...additionalPlugins
-			],
-			sanitizer: DOMPurify.sanitize
-		});
-	}
+	// if (!cachedCarta || forceReinit) {
+	cachedCarta = new Carta({
+		// theme: theme === "dark" ? min_dark : one_light,
+		// shikiOptions: {
+		// 	themes: [one_light, min_dark],
+		// },
+		extensions: [
+			// hideFrontmatter,
+			// cartaHideFrontmatter,
+			// code({
+			// 	inline: "tailing-curly-colon",
+			// 	langs: [
+			// 		"javascript",
+			// 		"docker",
+			// 		"py",
+			// 		"yaml",
+			// 		"toml",
+			// 		"rust",
+			// 		"toml",
+			// 		"shell",
+			// 	],
+			// 	theme: one_light,
+			// }),
+			// cartawiki,
+			// cartaTaskStylesMinimal,
+			// component(mapped, initializeComponents),
+			math(),
+			callouts,
+			mermaid,
+			shikicode,
+			anchor(),
+			...additionalPlugins
+		],
+		sanitizer: DOMPurify.sanitize
+	});
+	// }
 	return cachedCarta;
 }
