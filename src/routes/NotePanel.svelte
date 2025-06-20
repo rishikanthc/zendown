@@ -1,29 +1,10 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import {
-		Editor,
-		rootCtx,
-		defaultValueCtx,
-		editorViewOptionsCtx,
-		editorViewCtx,
-		serializerCtx
-	} from '@milkdown/core';
-	import { nord } from '@milkdown/theme-nord';
-	import { commonmark } from '@milkdown/preset-commonmark';
-	import { gfm } from '@milkdown/preset-gfm';
-	import { history } from '@milkdown/plugin-history';
-	import { math } from '@milkdown/plugin-math';
-	import { prism } from '@milkdown/plugin-prism';
-	import { clipboard } from '@milkdown/plugin-clipboard';
-	import { cursor } from '@milkdown/plugin-cursor';
-	import { listener, listenerCtx } from '@milkdown/plugin-listener';
+	import { onMount } from 'svelte';
 	import { Eye, Pencil, Menu, Save } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import AppSidebar from '../lib/components/AppSidebar.svelte';
-
-	// Import Milkdown styles
-	import '@milkdown/theme-nord/style.css';
+	import MarkdownEditor from './MarkdownEditor.svelte';
 
 	type NewNoteData = any;
 
@@ -43,7 +24,7 @@
 	let {
 		key,
 		initialContent,
-		id: initialId, // Renamed to avoid conflict with DOM id attribute
+		id: initialId,
 		onNoteCreated
 	}: {
 		key?: number;
@@ -57,17 +38,13 @@
 	const localStorageKey = 'milkdown-editor-content';
 	const defaultNewNoteValue = '# Start typing your title here\n\nAnd your content below...';
 
-	// noteValue is the Svelte-side truth for the editor's content.
-	// It's initialized based on props or localStorage.
-	// It's updated by the editor listener upon user input.
-	// It's updated by the prop-handling $effect if new initialContent/initialId is passed.
+	// Initialize noteValue - this will be the single source of truth
 	let noteValue = $state(
 		(() => {
 			if (initialContent !== undefined) {
 				return initialContent;
 			}
 			if (typeof window !== 'undefined' && window.localStorage) {
-				// Only use localStorage if it's a new note (no initialId)
 				if (initialId === undefined) {
 					return window.localStorage.getItem(localStorageKey) ?? defaultNewNoteValue;
 				}
@@ -77,20 +54,17 @@
 	);
 
 	let debounceTimer: number | undefined;
-	let milkdownEditor: Editor | undefined;
-	let editorContainer: HTMLElement;
+	let markdownEditor: MarkdownEditor;
 
-	// Effect for saving new, unsaved note content to localStorage
+	// Create a unique key for the editor that changes when switching notes
+	const editorKey = $derived(currentNoteId || 'new-note');
+
+	// Save to localStorage for new notes
 	$effect(() => {
-		const valueToSave = noteValue;
-		if (
-			currentNoteId === undefined && // Only save if it's a new, unsaved note
-			typeof window !== 'undefined' &&
-			window.localStorage
-		) {
+		if (currentNoteId === undefined && typeof window !== 'undefined' && window.localStorage) {
 			clearTimeout(debounceTimer);
 			debounceTimer = window.setTimeout(() => {
-				window.localStorage.setItem(localStorageKey, valueToSave);
+				window.localStorage.setItem(localStorageKey, noteValue);
 			}, 500);
 		}
 		return () => {
@@ -115,6 +89,11 @@
 	}
 
 	async function saveNote(): Promise<boolean> {
+		// Get the latest content from the editor
+		if (markdownEditor && currentMode === 'write') {
+			noteValue = markdownEditor.getContent();
+		}
+
 		const title = extractTitleFromMarkdown(noteValue);
 
 		if (!title) {
@@ -170,9 +149,9 @@
 				}, 3000);
 
 				if (isNewNote && responseData.id) {
-					currentNoteId = responseData.id; // Update currentNoteId for the newly created note
+					currentNoteId = responseData.id;
 					if (typeof window !== 'undefined' && window.localStorage) {
-						window.localStorage.removeItem(localStorageKey); // Clear temp content
+						window.localStorage.removeItem(localStorageKey);
 					}
 					if (onNoteCreated) {
 						await onNoteCreated(responseData);
@@ -226,24 +205,21 @@
 	function togglePreviewMode() {
 		if (currentMode === 'write') {
 			// Get current content from editor before switching to preview
-			if (milkdownEditor) {
-				milkdownEditor.action((ctx) => {
-					const editorView = ctx.get(editorViewCtx);
-					const serializer = ctx.get(serializerCtx);
-					const currentEditorMarkdown = serializer(editorView.state.doc);
-					if (currentEditorMarkdown !== noteValue) {
-						noteValue = currentEditorMarkdown; // Sync Svelte state if editor had changes not yet flushed by listener
-					}
-				});
+			if (markdownEditor) {
+				noteValue = markdownEditor.getContent();
 			}
 			currentMode = 'preview';
 		} else {
 			currentMode = 'write';
-			// Editor will be re-initialized by the $effect managing its lifecycle
 		}
 	}
 
-	const handleKeyDown = (event: KeyboardEvent) => {
+	function handleEditorChange(event: CustomEvent<string>) {
+		noteValue = event.detail;
+		isDirty = true;
+	}
+
+	function handleKeyDown(event: KeyboardEvent) {
 		if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
 			event.preventDefault();
 			togglePreviewMode();
@@ -251,170 +227,41 @@
 			event.preventDefault();
 			saveNote();
 		}
-	};
-
-	async function initializeEditor(contentToLoad: string) {
-		if (!editorContainer) return;
-		// Ensure any previous editor is fully destroyed before creating a new one.
-		if (milkdownEditor) {
-			await destroyEditor();
-		}
-		try {
-			milkdownEditor = await Editor.make()
-				.config((ctx) => {
-					ctx.set(rootCtx, editorContainer);
-					ctx.set(defaultValueCtx, contentToLoad); // Use the passed content
-					ctx.get(listenerCtx).markdownUpdated((_ctx, markdown, _prevMarkdown) => {
-						if (markdown !== noteValue) {
-							noteValue = markdown; // Update Svelte state from editor changes
-							isDirty = true;
-						}
-					});
-				})
-				.config(nord)
-				.use(commonmark)
-				.use(gfm)
-				.use(history)
-				// .use(math) // Uncomment after installing katex
-				// .use(prism) // Uncomment after installing prismjs
-				.use(clipboard)
-				.use(cursor)
-				.use(listener)
-				.create();
-		} catch (error) {
-			console.error('Failed to initialize Milkdown editor:', error);
-		}
 	}
 
-	async function destroyEditor() {
-		if (milkdownEditor) {
-			try {
-				await milkdownEditor.destroy();
-			} catch (error) {
-				console.error('Failed to destroy Milkdown editor:', error);
-			} finally {
-				milkdownEditor = undefined;
-			}
-		}
-	}
-
-	onMount(() => {
-		if (typeof window !== 'undefined') {
-			window.addEventListener('keydown', handleKeyDown);
-		}
-		// Initial editor setup is handled by $effects based on `currentMode` and props.
-		return () => {
-			if (typeof window !== 'undefined') {
-				window.removeEventListener('keydown', handleKeyDown);
-			}
-			clearTimeout(debounceTimer);
-			// destroyEditor(); // Handled by $effect cleanup
-		};
-	});
-
-	// Effect for handling prop changes (initialContent, initialId)
-	// This effect is responsible for updating the Svelte state (noteValue, currentNoteId)
-	// and then ensuring the editor, if active, reflects these changes.
+	// Handle prop changes for loading new notes
 	$effect(() => {
-		// This effect's explicit dependencies are initialContent and initialId (from props).
-		// It runs when these props change, indicating a new note should be loaded or state reset.
-		let newContentToSet: string;
-		const newIdToSet: string | undefined = initialId; // Use current prop value for id
+		// Track props explicitly to ensure reactivity
+		const newContent = initialContent;
+		const newId = initialId;
 
-		if (initialContent !== undefined) {
-			// If initialContent prop is provided, it's the source of truth.
-			newContentToSet = initialContent;
-			// If loading a specific note (newIdToSet is defined), clear any temp localStorage content.
-			if (newIdToSet && typeof window !== 'undefined' && window.localStorage) {
+		// Check if this is actually a new note being loaded
+		if (newContent !== undefined && newContent !== noteValue) {
+			noteValue = newContent;
+			isDirty = false;
+		}
+
+		if (newId !== currentNoteId) {
+			currentNoteId = newId;
+			isDirty = false; // Reset dirty state when switching notes
+			if (newId && typeof window !== 'undefined' && window.localStorage) {
 				window.localStorage.removeItem(localStorageKey);
 			}
-		} else {
-			// No initialContent prop. This typically means a new, unsaved note scenario.
-			if (newIdToSet === undefined && typeof window !== 'undefined' && window.localStorage) {
-				// If it's a truly new note (no ID prop yet), try to load from localStorage.
-				newContentToSet = window.localStorage.getItem(localStorageKey) ?? defaultNewNoteValue;
-			} else {
-				// Default for new notes if localStorage is empty,
-				// or if an ID was passed but no content (less common for existing notes, but fallback).
-				newContentToSet = defaultNewNoteValue;
-			}
 		}
-
-		// Update Svelte's reactive state variables.
-		noteValue = newContentToSet;
-		currentNoteId = newIdToSet;
-		isDirty = false; // Content has just been loaded/reset from props/localStorage, so it's not "dirty"
-
-		// If the Milkdown editor is currently active (in 'write' mode and container exists),
-		// it needs to be updated to reflect this newly set `noteValue`.
-		// Destroying and re-initializing is a robust way to ensure the editor state is correct.
-		if (milkdownEditor && currentMode === 'write' && editorContainer) {
-			destroyEditor().then(() => {
-				// After destruction, if conditions are still met (still in write mode, container exists),
-				// re-initialize the editor. It will use the `noteValue` that was just updated.
-				if (editorContainer && currentMode === 'write') {
-					initializeEditor(noteValue);
-				}
-			});
-		}
-		// If the editor is not in 'write' mode, or not yet created (e.g. editorContainer not ready),
-		// the other $effect (editor lifecycle manager) will use the updated `noteValue`
-		// when it eventually creates or switches to the editor.
 	});
 
-	// Effect for managing editor instance creation/destruction based on mode and container.
-	// This ensures the editor exists and is correctly configured when in 'write' mode,
-	// and is cleaned up otherwise.
-	$effect(() => {
-		// Dependencies: editorContainer, currentMode.
-		// Also implicitly depends on `noteValue` because `initializeEditor` uses it.
-		if (editorContainer && currentMode === 'write') {
-			// If in 'write' mode and the DOM container for the editor is available...
-			if (!milkdownEditor) {
-				// ...and no editor instance currently exists, create one.
-				// `noteValue` at this point reflects the latest state,
-				// either from initial component load, prop changes, or user input.
-				initializeEditor(noteValue);
-			}
-			// If `milkdownEditor` already exists and `currentMode` is 'write',
-			// we assume it's correctly reflecting `noteValue` due to its internal listener,
-			// or it was just re-initialized by the prop-handling effect.
-			// No specific action to re-initialize is needed here if the editor instance is already present.
-		} else {
-			// If not in 'write' mode, or if the editor container is not (or no longer) available,
-			// ensure any existing Milkdown editor instance is destroyed to free resources.
-			if (milkdownEditor) {
-				destroyEditor();
-			}
-		}
-
-		// Cleanup function for this $effect:
-		// This runs if `editorContainer` or `currentMode` changes (causing the effect to re-run),
-		// or when the component instance is unmounted.
-		// Its purpose is to ensure the editor is cleaned up if the conditions for its existence are no longer met.
-		return () => {
-			if (milkdownEditor) {
-				destroyEditor();
-			}
-		};
-	});
-
-	// Effect for fetching related notes when in preview mode and a note ID exists
+	// Fetch related notes when in preview mode
 	$effect(() => {
 		if (currentNoteId && currentMode === 'preview') {
 			fetchRelatedNotes(currentNoteId);
 		} else {
-			// Clear related notes if not applicable
 			relatedNotes = [];
 			isLoadingRelatedNotes = false;
 			relatedNotesError = null;
 		}
 	});
 
-	// Simple markdown to HTML conversion for preview mode
 	function markdownToHtml(markdown: string): string {
-		// Basic replacements; consider a more robust library if complex markdown features are needed here
-		// that aren't covered by Milkdown's direct preview or if Milkdown isn't used for preview.
 		return markdown
 			.replace(/^### (.*$)/gm, '<h3>$1</h3>')
 			.replace(/^## (.*$)/gm, '<h2>$1</h2>')
@@ -423,21 +270,24 @@
 			.replace(/\*(.*?)\*/g, '<em>$1</em>')
 			.replace(/`(.*?)`/g, '<code>$1</code>')
 			.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>')
-			.replace(/\n\n/g, '</p><p>') // Handle paragraph breaks
-			.replace(/\n/g, '<br>') // Handle line breaks within paragraphs
-			.replace(/^(.*)$/gm, '<p>$1</p>') // Wrap remaining lines in paragraphs
-			.replace(/<p><\/p>/g, '') // Remove empty paragraphs
-			.replace(/<p>(<h[1-6]>.*?<\/h[1-6]>)<\/p>/g, '$1') // Correctly handle headings wrapped in <p>
-			.replace(/<p>(<br>)+<\/p>/g, ''); // Clean up paragraphs that only contain <br>
+			.replace(/\n\n/g, '</p><p>')
+			.replace(/\n/g, '<br>')
+			.replace(/^(.*)$/gm, '<p>$1</p>')
+			.replace(/<p><\/p>/g, '')
+			.replace(/<p>(<h[1-6]>.*?<\/h[1-6]>)<\/p>/g, '$1')
+			.replace(/<p>(<br>)+<\/p>/g, '');
 	}
 
-	// onDestroy lifecycle hook for final cleanup (though $effect cleanup should handle editor)
-	onDestroy(() => {
-		// Main editor destruction is handled by the $effect cleanup.
-		// This is a final safeguard.
-		if (milkdownEditor) {
-			destroyEditor();
+	onMount(() => {
+		if (typeof window !== 'undefined') {
+			window.addEventListener('keydown', handleKeyDown);
 		}
+		return () => {
+			if (typeof window !== 'undefined') {
+				window.removeEventListener('keydown', handleKeyDown);
+			}
+			clearTimeout(debounceTimer);
+		};
 	});
 </script>
 
@@ -512,7 +362,12 @@
 			class="prose prose-base dark:prose-invert prose-headings:font-[Space_Grotesk] prose-headings:text-gray-800 mx-auto w-full max-w-[800px] flex-grow px-2 py-4 font-[Noto_Sans] text-gray-700 sm:px-4 md:px-6 md:py-6 dark:text-gray-100"
 		>
 			{#if currentMode === 'write'}
-				<div bind:this={editorContainer} class="milkdown-editor min-h-[400px]"></div>
+				<MarkdownEditor
+					bind:this={markdownEditor}
+					value={noteValue}
+					key={editorKey}
+					onchange={handleEditorChange}
+				/>
 			{:else}
 				<div class="prose-content">
 					{@html markdownToHtml(noteValue)}
@@ -590,59 +445,4 @@
 <style>
 	@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Serif:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Noto+Sans+Mono:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
 	@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-
-	/* Custom styles for Milkdown editor */
-	:global(.milkdown) {
-		background: transparent !important;
-		border: none !important;
-		box-shadow: none !important;
-		outline: none !important;
-	}
-
-	:global(.milkdown .editor) {
-		outline: none !important;
-		border: none !important;
-		font-family: 'Noto Sans', sans-serif !important;
-		line-height: 1.7 !important;
-		color: inherit !important;
-		background: transparent !important;
-		min-height: inherit; /* Ensure editor takes up min-h from parent */
-		height: 100%; /* Allow editor to grow */
-		padding: 0; /* Override default milkdown padding if any */
-	}
-
-	.milkdown-editor {
-		/* This is the direct parent of .milkdown */
-		/* Ensure it allows child to expand; min-h-[400px] is already applied */
-		display: flex; /* Helps if .milkdown needs to fill height */
-		flex-direction: column;
-	}
-
-	:global(.milkdown .ProseMirror) {
-		padding: 0.5rem; /* Add some padding inside the editable area if desired */
-		min-height: inherit; /* Inherit min-height from parent for typing area */
-		height: 100%;
-		box-sizing: border-box;
-	}
-
-	:global(.milkdown .prose) {
-		max-width: none !important;
-		color: inherit !important;
-	}
-
-	:global(.milkdown h1),
-	:global(.milkdown h2),
-	:global(.milkdown h3),
-	:global(.milkdown h4),
-	:global(.milkdown h5),
-	:global(.milkdown h6) {
-		font-family: 'Space Grotesk', sans-serif !important;
-		color: inherit !important;
-	}
-
-	:global(.milkdown-editor .milkdown) {
-		padding: 0 !important;
-		margin: 0 !important;
-		flex-grow: 1; /* Allow milkdown itself to grow if its parent is flex */
-	}
 </style>
