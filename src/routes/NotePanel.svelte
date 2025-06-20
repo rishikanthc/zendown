@@ -5,6 +5,8 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import AppSidebar from '../lib/components/AppSidebar.svelte';
 	import MarkdownEditor from './MarkdownEditor.svelte';
+	import { getCartaInstance } from './getCarta';
+	import { Markdown } from 'carta-md';
 
 	type NewNoteData = any;
 
@@ -14,6 +16,8 @@
 		canonical_path: string;
 		score: number;
 	}
+
+	const carta = getCartaInstance('light');
 
 	let relatedNotes = $state<RelatedNote[]>([]);
 	let isLoadingRelatedNotes = $state(false);
@@ -379,16 +383,20 @@
 			class="prose prose-base dark:prose-invert prose-headings:font-[Space_Grotesk] prose-headings:text-gray-800 mx-auto w-full max-w-[800px] flex-grow px-2 py-4 font-[Noto_Sans] text-gray-700 sm:px-4 md:px-6 md:py-6 dark:text-gray-100"
 		>
 			{#if currentMode === 'write'}
-				<MarkdownEditor
-					bind:this={markdownEditor}
-					value={noteValue}
-					key={editorKey}
-					on:change={handleEditorChange}
-				/>
-			{:else}
-				<div class="prose-content">
-					{@html markdownToHtml(noteValue)}
+				<div class="font-[Space_Mono]">
+					<MarkdownEditor
+						bind:this={markdownEditor}
+						value={noteValue}
+						key={editorKey}
+						on:change={handleEditorChange}
+					/>
 				</div>
+			{:else}
+				{#key noteValue}
+					<Markdown {carta} value={noteValue} />
+
+					<!-- {@html markdownToHtml(noteValue)} -->
+				{/key}
 			{/if}
 		</div>
 
@@ -460,6 +468,5 @@
 </Sidebar.Provider>
 
 <style>
-	@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Serif:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Noto+Sans+Mono:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
 	@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 </style>

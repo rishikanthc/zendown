@@ -52,7 +52,7 @@
 						}
 					});
 				})
-				.config(nord)
+				// .config(nord)
 				.use(commonmark)
 				.use(gfm)
 				.use(history)
@@ -185,7 +185,19 @@
 <div bind:this={editorContainer} class="milkdown-editor min-h-[400px]" class:readonly></div>
 
 <style>
-	.milkdown-editor {
+	:global(.milkdown .editor) {
+		outline: none !important;
+		border: none !important;
+
+		/* font-family: 'Noto Sans', sans-serif !important;
+		line-height: 1.7 !important;
+		color: inherit !important;
+		background: transparent !important;
+		min-height: inherit; */
+		height: 100%;
+		padding: 0;
+	}
+	/* .milkdown-editor {
 		display: flex;
 		flex-direction: column;
 	}
@@ -212,33 +224,23 @@
 		min-height: inherit;
 		height: 100%;
 		padding: 0;
-	}
+	} */
 
-	:global(.milkdown .ProseMirror) {
+	/* :global(.milkdown .ProseMirror) {
 		padding: 0.5rem;
 		min-height: inherit;
 		height: 100%;
 		box-sizing: border-box;
-	}
+	} */
 
 	:global(.milkdown .prose) {
 		max-width: none !important;
-		color: inherit !important;
+		/* color: inherit !important; */
 	}
-
-	:global(.milkdown h1),
-	:global(.milkdown h2),
-	:global(.milkdown h3),
-	:global(.milkdown h4),
-	:global(.milkdown h5),
-	:global(.milkdown h6) {
-		font-family: 'Space Grotesk', sans-serif !important;
-		color: inherit !important;
-	}
-
+	/*
 	:global(.milkdown-editor .milkdown) {
 		padding: 0 !important;
 		margin: 0 !important;
 		flex-grow: 1;
-	}
+	} */
 </style>
