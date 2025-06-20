@@ -8,6 +8,7 @@ import {
 	slugify,
 	extractTitleFromMarkdownServer
 } from '$lib/server/utils';
+import { AI_SERVER_URL } from '$env/static/private';
 
 export const POST: RequestHandler = async ({ request }) => {
 	let requestData;
@@ -106,11 +107,11 @@ export const POST: RequestHandler = async ({ request }) => {
 					id: insertedResult.id,
 					content: insertedResult.content
 				};
-				const aiServerUrl = 'http://localhost:8000/api/upsert/'; // Consider making this an environment variable
+				const aiUpsertEndpoint = AI_SERVER_URL + '/api/upsert/';
 
-				// console.log(`Attempting to upsert to AI: ${JSON.stringify(aiUpsertPayload)} at ${aiServerUrl}`);
+				// console.log(`Attempting to upsert to AI: ${JSON.stringify(aiUpsertPayload)} at ${aiUpsertEndpoint}`);
 
-				const aiResponse = await fetch(aiServerUrl, {
+				const aiResponse = await fetch(aiUpsertEndpoint, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json'

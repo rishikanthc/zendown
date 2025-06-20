@@ -1,7 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-
-const AI_SERVER_URL = 'http://localhost:8000'; // Consider making this an environment variable
+import { AI_SERVER_URL } from '$env/static/private';
 
 interface AISimilarityResult {
 	id: string;
@@ -40,7 +39,8 @@ export const GET: RequestHandler = async (event) => {
 			limit: 10 // Default limit, can be made configurable via query params if needed
 		};
 
-		const aiResponse = await fetch(AI_SERVER_URL + '/api/search/similar/', {
+		const aiSearchEndpoint = AI_SERVER_URL + '/api/search/similar/';
+		const aiResponse = await fetch(aiSearchEndpoint, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
