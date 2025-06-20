@@ -35,6 +35,7 @@
 	let milkdownEditor: Editor | undefined;
 	let isInitialized = false;
 	let isUpdatingFromProp = false;
+	let lastPropKey = key;
 
 	async function initializeEditor() {
 		if (!editorContainer || milkdownEditor) return;
@@ -82,31 +83,46 @@
 		}
 	}
 
-	// Update editor content when value prop changes
-	// async function updateEditorContent(newValue: string) {
-	// 	if (!milkdownEditor || !isInitialized || isUpdatingFromProp) return;
+	// Update editor content without destroying/recreating
+	async function updateEditorContent(newValue: string) {
+		if (!milkdownEditor || !isInitialized) return;
 
-	// 	// Check if the new value is actually different from current content
-	// 	const currentContent = getCurrentContent();
-	// 	if (currentContent === newValue) {
-	// 		return; // No need to update if content is the same
-	// 	}
+		const currentContent = getCurrentContent();
+		if (currentContent === newValue) {
+			return; // No need to update if content is the same
+		}
 
-	// 	try {
-	// 		isUpdatingFromProp = true;
+		try {
+			isUpdatingFromProp = true;
 
-	// 		// For significant content changes (like navigation), recreate the editor
-	// 		// This is more reliable than trying to update the content in place
-	// 		await destroyEditor();
-	// 		await initializeEditor();
-	// 	} catch (error) {
-	// 		console.error('Failed to update editor content:', error);
-	// 	} finally {
-	// 		setTimeout(() => {
-	// 			isUpdatingFromProp = false;
-	// 		}, 100); // Longer timeout for recreation
-	// 	}
-	// }
+			// Use action to update content without destroying editor
+			milkdownEditor.action((ctx) => {
+				const view = ctx.get(editorViewCtx);
+				const parser = ctx.get(serializerCtx);
+
+				// Create new document from markdown
+				const newDoc = view.state.schema.nodeFromJSON(
+					view.state.schema.topNodeType.createAndFill().toJSON()
+				);
+
+				// Replace content by dispatching a transaction
+				const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, newDoc.content);
+				view.dispatch(tr);
+
+				// Set the new markdown content
+				ctx.set(defaultValueCtx, newValue);
+			});
+		} catch (error) {
+			console.error('Failed to update editor content, recreating editor:', error);
+			// Fallback: recreate editor if update fails
+			await destroyEditor();
+			await initializeEditor();
+		} finally {
+			setTimeout(() => {
+				isUpdatingFromProp = false;
+			}, 50);
+		}
+	}
 
 	// Get current content from editor
 	function getCurrentContent(): string {
@@ -140,78 +156,24 @@
 		}
 	}
 
-	// Effect to handle value prop changes and key changes (for forced recreation)
-	let prevEditorComponentKey = $state(key); // Initialize with the initial key prop from parent
-	let prevValuePropForEffect = $state(value); // Track the value prop passed to this effect in previous run
-
+	// Only recreate editor when key changes (different note) or initial load
 	$effect(() => {
-		const newPropValue = value; // Current 'value' prop from parent (NotePanel)
-		const newEditorComponentKey = key; // Current 'key' prop from parent (NotePanel)
-
-		if (isInitialized) {
-			// Only proceed if the editor has been initialized at least once
-			if (newEditorComponentKey !== prevEditorComponentKey) {
-				// The editor's 'key' prop has changed. This is a strong signal to re-initialize,
-				// typically meaning a completely different note is being loaded or a forced refresh.
-				// The `newPropValue` (which is the current `value` prop) will be used by `updateEditorContent`.
-				updateEditorContent(newPropValue);
-			} else if (newPropValue !== prevValuePropForEffect) {
-				// The 'key' prop is the same, but the 'value' prop from the parent has changed.
-				// This indicates the parent (NotePanel) wants to update the content.
-				// We should compare `newPropValue` with the editor's *actual* internal content
-				// to avoid unnecessary updates if they are already in sync.
-				const editorInternalContent = getCurrentContent();
-				if (newPropValue !== editorInternalContent) {
-					// Only update if the new prop value actually differs from what the editor currently holds.
-					updateEditorContent(newPropValue);
-				}
+		if (key !== lastPropKey) {
+			// Key changed - this means we're loading a different note
+			lastPropKey = key;
+			if (isInitialized) {
+				destroyEditor().then(() => initializeEditor());
 			}
+		} else if (isInitialized && value !== getCurrentContent()) {
+			// Same note, but content prop changed - update without recreating
+			updateEditorContent(value);
 		}
-
-		// Update trackers for the next $effect run, reflecting the props just processed.
-		prevEditorComponentKey = newEditorComponentKey;
-		prevValuePropForEffect = newPropValue;
 	});
-
-	// Update editor content when value prop changes.
-	// This function now explicitly takes the new markdown to use.
-	async function updateEditorContent(newMarkdown: string) {
-		if (!isInitialized) {
-			// This guard might be redundant given the $effect's isInitialized check, but it's safe.
-			return;
-		}
-
-		try {
-			isUpdatingFromProp = true; // Signal that the upcoming content change is driven by a prop
-
-			// Destroy and re-initialize the editor. This is the most reliable way to
-			// ensure the editor starts fresh with the newMarkdown, especially for Milkdown's defaultValueCtx.
-			// The `initializeEditor` function uses the component's `value` prop for defaultValueCtx.
-			// Since this `updateEditorContent` is called with `newMarkdown` (which comes from the `value` prop in the $effect),
-			// the `value` prop of the component will be up-to-date when `initializeEditor` reads it.
-			await destroyEditor();
-			await initializeEditor(); // This will use the latest `value` prop of the MarkdownEditor component.
-		} catch (error) {
-			console.error('Failed to update editor content:', error);
-		} finally {
-			// Short timeout to allow editor to fully initialize and render
-			// before re-enabling dispatches of 'change' events from the editor itself.
-			setTimeout(() => {
-				isUpdatingFromProp = false;
-			}, 50); // Adjusted timeout, can be tweaked.
-		}
-	}
 
 	onMount(() => {
 		// Initialize editor after DOM is ready
 		if (editorContainer) {
-			initializeEditor().then(() => {
-				// After the first initialization attempt, set the 'previous' state trackers
-				// to match the props that were used for this initial setup.
-				// This correctly baselines the $effect logic.
-				prevEditorComponentKey = key;
-				prevValuePropForEffect = value;
-			});
+			initializeEditor();
 		}
 	});
 
