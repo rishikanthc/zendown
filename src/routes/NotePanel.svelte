@@ -24,7 +24,9 @@
 
 	let isDirty = $state(false);
 	const AUTO_SAVE_INTERVAL = 3000; // 3 seconds
-	let autoSaveTimer: number | undefined;
+	let autoSaveDebounceTimer: number | undefined; // Timer for debounced auto-save
+	let lastInputTimestamp = $state(Date.now()); // Ensures effect re-runs on each input
+	let isAutoSaving = $state(false); // Prevents overlapping auto-save calls
 
 	let {
 		key,
@@ -45,8 +47,8 @@
 			[
 				'input', // Listen to the 'input' event on the textarea element within Carta
 				() => {
-					console.log('Carta input detected, setting isDirty = true');
 					isDirty = true;
+					lastInputTimestamp = Date.now(); // Update timestamp on every input
 				}
 			]
 		]
@@ -110,17 +112,26 @@
 		const isAutoSave = options?.isAutoSave ?? false;
 
 		if (!title) {
-			const message =
-				'Error: A title (H1 heading, e.g., "# Your Title") is required to save the note.';
-			saveStatusMessage = message;
-			if (!isAutoSave && typeof window !== 'undefined') window.alert(message);
-			setTimeout(() => {
-				if (saveStatusMessage === message) saveStatusMessage = '';
-			}, 5000);
-			return false;
+			// For manual saves, show an error message and alert.
+			// For auto-saves, this will fail silently, note remains dirty.
+			if (!isAutoSave) {
+				const message =
+					'Error: A title (H1 heading, e.g., "# Your Title") is required to save the note.';
+				saveStatusMessage = message;
+				if (typeof window !== 'undefined') window.alert(message);
+				setTimeout(() => {
+					if (saveStatusMessage === message) saveStatusMessage = '';
+				}, 5000);
+			}
+			return false; // Save failed
 		}
 
-		saveStatusMessage = 'Saving...';
+		// Show "Saving..." only for manual saves
+		if (!isAutoSave) {
+			saveStatusMessage = 'Saving...';
+		}
+		// For auto-save, we don't set "Saving...".
+		// Any existing message will be replaced by "Saved" on success, or cleared by its own timeout.
 		let response;
 		let requestBody;
 		let apiUrl: string;
@@ -153,8 +164,23 @@
 
 			if (response.ok) {
 				const savedTitle = responseData.title || title;
-				const successMessage = `Note '${savedTitle}' saved successfully!`;
+				let successMessage: string;
+
+				if (isAutoSave) {
+					successMessage = 'Saved'; // Simple message for auto-save
+				} else {
+					successMessage = `Note '${savedTitle}' saved successfully!`;
+				}
 				saveStatusMessage = successMessage;
+
+				// Clear success message after a delay
+				// Shorter delay for "Saved" from auto-save
+				setTimeout(
+					() => {
+						if (saveStatusMessage === successMessage) saveStatusMessage = '';
+					},
+					isAutoSave ? 1500 : 3000
+				);
 
 				if (isNewNote && responseData.id) {
 					currentNoteId = responseData.id;
@@ -165,31 +191,31 @@
 						await onNoteCreated(responseData);
 					}
 				}
-				isDirty = false; // Reset dirty flag on successful save
-				// Clear success message after a delay
-				setTimeout(() => {
-					if (saveStatusMessage === successMessage) saveStatusMessage = '';
-				}, 3000); // Keep success message for 3 seconds
+				isDirty = false; // Reset dirty flag on successful save (for both auto and manual)
 				return true;
 			} else {
 				const errorMessage = `Error saving note: ${responseData.message || response.statusText || 'Unknown server error.'}`;
-				saveStatusMessage = errorMessage;
+				if (!isAutoSave) {
+					saveStatusMessage = errorMessage;
+					// Clear error message after a delay
+					setTimeout(() => {
+						if (saveStatusMessage === errorMessage) saveStatusMessage = '';
+					}, 5000);
+				}
 				if (!isAutoSave && typeof window !== 'undefined') window.alert(errorMessage);
-				// Clear error message after a delay
-				setTimeout(() => {
-					if (saveStatusMessage === errorMessage) saveStatusMessage = '';
-				}, 5000);
 				return false;
 			}
 		} catch (error: any) {
 			console.error('Failed to save note:', error);
 			const networkErrorMessage = `Failed to save note: ${error?.message || 'A network or client-side error occurred.'}`;
-			saveStatusMessage = networkErrorMessage;
+			if (!isAutoSave) {
+				saveStatusMessage = networkErrorMessage;
+				// Clear network error message after a delay
+				setTimeout(() => {
+					if (saveStatusMessage === networkErrorMessage) saveStatusMessage = '';
+				}, 5000);
+			}
 			if (!isAutoSave && typeof window !== 'undefined') window.alert(networkErrorMessage);
-			// Clear network error message after a delay
-			setTimeout(() => {
-				if (saveStatusMessage === networkErrorMessage) saveStatusMessage = '';
-			}, 5000);
 			return false;
 		}
 	}
@@ -276,34 +302,33 @@
 		}
 	});
 
-	// Auto-save effect
+	// Debounced auto-save effect
 	$effect(() => {
+		const _timestamp = lastInputTimestamp; // Read to make it a dependency for the effect
+
 		if (typeof window !== 'undefined') {
-			// Clear any existing timer when the effect re-runs or component unmounts
-			if (autoSaveTimer) {
-				clearInterval(autoSaveTimer);
-				autoSaveTimer = undefined;
+			if (!isDirty) {
+				clearTimeout(autoSaveDebounceTimer);
+				autoSaveDebounceTimer = undefined;
+				return; // No need to set up a new timer if not dirty
 			}
 
-			autoSaveTimer = window.setInterval(async () => {
-				// console.log(`Auto-save interval. isDirty: ${isDirty}`);
-				if (isDirty) {
-					console.log('Auto-save: Document is dirty, attempting to save...');
-					const saved = await saveNote({ isAutoSave: true });
-					if (saved) {
-						// console.log('Auto-save: Note saved successfully.');
-					} else {
-						// console.log('Auto-save: Save attempt failed or note was not ready to save (e.g., no title).');
-					}
+			// If dirty, set up or reset the debounce timer
+			clearTimeout(autoSaveDebounceTimer);
+			autoSaveDebounceTimer = window.setTimeout(async () => {
+				// Only proceed if still dirty AND an auto-save isn't already in progress
+				if (isDirty && !isAutoSaving) {
+					isAutoSaving = true;
+					// console.log('Auto-save: Attempting to save due to inactivity...'); // Optional: for debugging
+					await saveNote({ isAutoSave: true });
+					// isDirty is set to false within saveNote on successful save
+					isAutoSaving = false;
 				}
 			}, AUTO_SAVE_INTERVAL);
 
-			// Cleanup function for the effect
+			// Cleanup function for the effect when dependencies change or component unmounts
 			return () => {
-				if (autoSaveTimer) {
-					clearInterval(autoSaveTimer);
-					autoSaveTimer = undefined;
-				}
+				clearTimeout(autoSaveDebounceTimer);
 			};
 		}
 	});
@@ -352,14 +377,13 @@
 					</Button>
 					{#if isDirty}
 						<span
-							class="absolute top-0 right-0 -mt-1 -mr-1 flex h-3 w-3 items-center justify-center rounded-full bg-magenta-600 ring-2 ring-white dark:ring-gray-800"
+							class="bg-magenta-400 absolute top-0 right-0 -mt-1 -mr-1 flex h-2 w-2 items-center justify-center rounded-full ring-2 ring-white dark:ring-gray-800"
 							title="Unsaved changes"
 						>
 							<span class="sr-only">Unsaved changes</span>
 						</span>
 					{/if}
 				</div>
-
 
 				<Button
 					onclick={togglePreviewMode}
@@ -444,10 +468,11 @@
 				class="fixed right-2 bottom-12 z-[100] rounded-md px-3 py-2 text-xs font-medium shadow-lg sm:right-5 sm:bottom-16 sm:px-4 sm:py-3 sm:text-sm md:bottom-[calc(theme(spacing.10)_+_0.5rem)] lg:bottom-16"
 				class:text-white={true}
 				class:bg-blue-600={saveStatusMessage.startsWith('Saving') ||
-					saveStatusMessage.includes('successfully')}
+					saveStatusMessage.includes('successfully') ||
+					saveStatusMessage === 'Saved'}
 				class:bg-red-600={saveStatusMessage.toLowerCase().includes('error')}
 				class:bg-gray-700={!saveStatusMessage.toLowerCase().includes('error') &&
-					!saveStatusMessage.includes('successfully') &&
+					!(saveStatusMessage.includes('successfully') || saveStatusMessage === 'Saved') &&
 					!saveStatusMessage.startsWith('Saving')}
 				role="status"
 				aria-live="polite"
