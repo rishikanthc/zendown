@@ -90,11 +90,12 @@
 
 	async function saveNote(): Promise<boolean> {
 		// Get the latest content from the editor
+		let contentToSave = noteValue;
 		if (markdownEditor && currentMode === 'write') {
-			noteValue = markdownEditor.getContent();
+			contentToSave = markdownEditor.getContent();
 		}
 
-		const title = extractTitleFromMarkdown(noteValue);
+		const title = extractTitleFromMarkdown(contentToSave);
 
 		if (!title) {
 			const message =
@@ -116,10 +117,10 @@
 
 		if (isNewNote) {
 			apiUrl = '/api/notes/create';
-			requestBody = { content: noteValue };
+			requestBody = { content: contentToSave };
 		} else {
 			apiUrl = '/api/notes/update';
-			requestBody = { id: currentNoteId, content: noteValue };
+			requestBody = { id: currentNoteId, content: contentToSave };
 		}
 
 		try {
@@ -143,6 +144,9 @@
 				const savedTitle = responseData.title || title;
 				const successMessage = `Note '${savedTitle}' saved successfully!`;
 				saveStatusMessage = successMessage;
+
+				// Update noteValue to match what was actually saved
+				noteValue = contentToSave;
 
 				setTimeout(() => {
 					if (saveStatusMessage === successMessage) saveStatusMessage = '';
@@ -230,24 +234,63 @@
 	}
 
 	// Handle prop changes for loading new notes
+	// Store the context of the last data load using props
+	let previousLoadContextKey = $state<string | undefined>(undefined);
+
 	$effect(() => {
-		// Track props explicitly to ensure reactivity
-		const newContent = initialContent;
-		const newId = initialId;
+		const newNoteIdProp = initialId; // Prop from parent ([slug]/+page.svelte or +page.svelte's modal)
+		const newContentProp = initialContent; // Prop from parent, content for existing notes
+		const panelInstanceKeyProp = key; // Prop from parent, used to differentiate "new note" panel instances
 
-		// Check if this is actually a new note being loaded
-		if (newContent !== undefined && newContent !== noteValue) {
-			noteValue = newContent;
-			isDirty = false;
-		}
+		// Construct a unique key representing the current data loading context.
+		// This key changes if:
+		//  a) A different existing note is loaded (newNoteIdProp changes).
+		//  b) A new instance of the "new note" panel is created/re-keyed (panelInstanceKeyProp changes).
+		const currentLoadContextKey = `${newNoteIdProp || 'newNoteMode'}-${panelInstanceKeyProp || 'noPanelInstanceKey'}`;
 
-		if (newId !== currentNoteId) {
-			currentNoteId = newId;
-			isDirty = false; // Reset dirty state when switching notes
-			if (newId && typeof window !== 'undefined' && window.localStorage) {
+		if (currentLoadContextKey !== previousLoadContextKey) {
+			// The loading context has changed. This means we are either:
+			// 1. Loading an entirely different existing note.
+			// 2. Displaying a fresh "new note" panel instance.
+			// 3. Or, this is the very first time this $effect is running for this NotePanel instance.
+			// In these scenarios, it's correct to (re)initialize `noteValue` based on the new props or defaults.
+
+			if (newContentProp !== undefined) {
+				// If initialContent is provided (typically for an existing note), use it as the source of truth.
+				noteValue = newContentProp;
+			} else if (newNoteIdProp === undefined) {
+				// This condition implies it's a "new note" panel context:
+				// - `newNoteIdProp` is undefined (no existing note ID passed).
+				// - `newContentProp` was also undefined (no specific initial content forced by props).
+				// So, attempt to load a draft from localStorage, or fall back to the default new note value.
+				noteValue = (typeof window !== 'undefined' && window.localStorage?.getItem(localStorageKey)) ?? defaultNewNoteValue;
+			}
+			// Note: If `newNoteIdProp` is defined (existing note) but `newContentProp` is undefined,
+			// `noteValue` would not be set here. This scenario assumes `initialContent` is always provided for existing notes.
+
+			isDirty = false; // Reset dirty status as we're loading fresh/initial content.
+			currentNoteId = newNoteIdProp; // Sync the panel's internal `currentNoteId` state with the prop.
+
+			if (newNoteIdProp && typeof window !== 'undefined' && window.localStorage) {
+				// If an existing note is being loaded, it's good practice to clear any
+				// "new note" draft from localStorage, as it's no longer the active editing context.
 				window.localStorage.removeItem(localStorageKey);
 			}
+
+			// Critical: Update the `previousLoadContextKey` to the current one.
+			// This ensures that this `if` block is not re-entered in subsequent $effect runs
+			// unless the loading context genuinely changes again.
+			previousLoadContextKey = currentLoadContextKey;
 		}
+		// If `currentLoadContextKey === previousLoadContextKey`:
+		// This means the props defining the "identity" of the note being edited (initialId and panelInstanceKeyProp)
+		// have *not* changed since the last time this $effect ran.
+		// A common case for this is after a `saveNote()` operation on the *same* note:
+		//  - `initialId` prop (for existing notes) remains the same.
+		//  - `panelInstanceKeyProp` (for new note modals) remains the same.
+		// In this crucial scenario, `noteValue` should *not* be reset from `newContentProp` by this $effect.
+		// Doing so would overwrite the `noteValue` that was just updated by `saveNote()` to reflect the successfully saved content.
+		// The `saveNote()` function is responsible for updating `noteValue` to the content that was persisted.
 	});
 
 	// Fetch related notes when in preview mode
