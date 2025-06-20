@@ -367,7 +367,7 @@
 			<div class="flex items-center gap-2">
 				<div class="relative">
 					<Button
-						on:click={saveNote}
+						onclick={saveNote}
 						variant="secondary"
 						size="icon"
 						title="Save note (Ctrl+S or Cmd+S)"
