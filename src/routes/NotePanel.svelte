@@ -488,9 +488,4 @@
 	@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 	/* Ensure the main content area can grow to fill available space, especially if related notes are not shown */
-	.prose {
-		/* A fallback min-height. Adjust based on your header/footer/other fixed elements' combined height. */
-		/* This helps prevent a very short editor on large screens if content is minimal. */
-		min-height: calc(100vh - theme('spacing.32')); /* Example: 32 = 8rem, adjust as needed */
-	}
 </style>

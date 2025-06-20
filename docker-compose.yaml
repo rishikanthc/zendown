@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  zendown-ai:
+    image: ghcr.io/rishikanthc/zendown-ai:v0.1.0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./db:/db
+    # environment:
+    #   - LANCEDB_URI=/db
+    restart: unless-stopped
+
+  zendown:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host
+      args:
+        - AI_SERVER_URL=http://zendown-ai:8000
+        - DATABASE_URL=file:local.db
+
+    ports:
+      - "3000:3000"
+    environment:
+      # This tells your SvelteKit app to call the AI API via Docker networking
+      - AI_SERVER_URL=http://zendown-ai:8000
+      # You can set other environment variables here (e.g. DATABASE_URL)
+      - DATABASE_URL=file:local.db
+    depends_on:
+      - zendown-ai
+    restart: unless-stopped
+

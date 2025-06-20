@@ -60,6 +60,7 @@
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
 		"@shikijs/rehype": "^3.6.0",
+		"@sveltejs/adapter-node": "^5.2.12",
 		"carta-md": "^4.11.1",
 		"drizzle-orm": "^0.40.0",
 		"isomorphic-dompurify": "^2.25.0",
