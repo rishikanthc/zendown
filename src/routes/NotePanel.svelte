@@ -269,7 +269,7 @@
 
 	// Fetch related notes when in preview mode
 	$effect(() => {
-		if (currentNoteId && currentMode === 'preview') {
+		if (currentNoteId) {
 			fetchRelatedNotes(currentNoteId);
 		} else {
 			relatedNotes = [];
@@ -392,7 +392,7 @@
 			{/if}
 		</div>
 
-		{#if currentMode === 'preview' && currentNoteId}
+		{#if currentNoteId}
 			<div
 				class="mx-auto w-full max-w-[800px] px-2 py-4 text-gray-700 sm:px-4 md:px-6 md:py-6 dark:text-gray-100"
 				role="region"
