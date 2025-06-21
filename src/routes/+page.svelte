@@ -1,7 +1,7 @@
 <script lang="ts">
 	import NotePanel from './NotePanel.svelte';
 	import { onMount, onDestroy } from 'svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
 	import type { PageData } from './+page';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import {
@@ -23,34 +23,23 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let showNewNoteModal = $state(false);
-	let newNotePanelKey = $state(0);
-
 	let showDeleteDialog = $state(false);
 	let noteIdToDelete = $state<string | null>(null);
 	let noteTitleToDelete = $state<string | null>(null);
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
 
-	const localStorageKey = 'carta-editor-content';
+	const localStorageKey = 'milkdown-editor-content'; // Corrected key
 
-	function openNewNoteModal() {
+	function handleNewNoteClick() {
 		if (typeof window !== 'undefined' && window.localStorage) {
-			window.localStorage.removeItem(localStorageKey);
+			window.localStorage.removeItem(localStorageKey); // Clear content for a new note
 		}
-		newNotePanelKey += 1;
-		showNewNoteModal = true;
-		if (typeof document !== 'undefined') document.body.classList.add('modal-open');
-	}
-
-	function closeNewNoteModal() {
-		showNewNoteModal = false;
-		if (typeof document !== 'undefined') document.body.classList.remove('modal-open');
+		goto('/notes/new'); // Navigate to the new note page
 	}
 
 	function handleGlobalKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
-			if (showNewNoteModal) closeNewNoteModal();
 			if (showDeleteDialog) closeDeleteDialog();
 			// Semantic search dialog escape is handled globally in +layout.svelte
 		}
@@ -98,14 +87,6 @@
 		}
 	}
 
-	async function handleNoteCreated(newNote: Note) {
-		closeNewNoteModal();
-		// data.notes will be updated by SvelteKit's reactivity after invalidation
-		await invalidateAll(); // Re-run load functions to fetch the latest notes
-		// The newNote parameter is kept for potential future use if direct data manipulation is needed
-		// for optimistic updates, but for now, we rely on refetching.
-	}
-
 	onMount(() => {
 		if (typeof window !== 'undefined') {
 			window.addEventListener('keydown', handleGlobalKeyDown);
@@ -122,7 +103,7 @@
 	<header class="m-0 w-full bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
 		<div class="container mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
 			<h1 class="font-[Megrim] text-2xl text-blue-600 sm:text-3xl dark:text-blue-400">ZenDown</h1>
-			<Button onclick={openNewNoteModal} variant="ghost" size="sm" class="sm:size-md"
+			<Button onclick={handleNewNoteClick} variant="ghost" size="sm" class="sm:size-md"
 				>New Note</Button
 			>
 		</div>
@@ -174,31 +155,6 @@
 				<p class="text-lg text-gray-600 sm:text-xl dark:text-gray-400">
 					No notes found. Click "New Note" to start writing your thoughts.
 				</p>
-			</div>
-		{/if}
-
-		{#if showNewNoteModal}
-			<div
-				class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-2 backdrop-blur-sm sm:p-4"
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby="new-note-panel-title"
-				onkeydown={(e) => {
-					if (e.key === 'Escape') closeNewNoteModal();
-				}}
-				onclick={closeNewNoteModal}
-			>
-				<div
-					class="h-full max-h-[95vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-2xl sm:max-h-[90vh] dark:bg-gray-800"
-					onclick={(event) => event.stopPropagation()}
-				>
-					<div class="flex h-full flex-col">
-						<div class="flex-grow overflow-y-auto">
-							<!-- NotePanel itself is now responsive -->
-							<NotePanel key={newNotePanelKey} onNoteCreated={handleNoteCreated} />
-						</div>
-					</div>
-				</div>
 			</div>
 		{/if}
 

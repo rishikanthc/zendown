@@ -110,7 +110,7 @@
 									<a
 										href={`${note.canonical_path}`}
 										{...menuButtonProps}
-										class="m-0 flex w-full shrink-0 items-center gap-1 rounded-xs p-0.5 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+										class="m-0 flex w-full shrink-0 items-center gap-1 rounded-xs p-1 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
 									>
 										<File class="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
 										<span class="truncate">
