@@ -1,38 +1,23 @@
-# sv
+# Zendown
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+ZenDown is a minimalist self-hostable markdown note taking app. ZenDown features a local ai-engine that generates document embeddings for semantic search and automatic related notes based on a similarity score. 
 
-## Creating a project
+ZenDown is ideal for frictionless zettelkasten as it removes the need for manually linking related notes. Related notes are automatically listed for each note. This reduces the cognitive burden of figuring out and connecting related content manually.  
 
-If you're seeing this, you've probably already done this step. Congrats!
+Find any note based on semantic meaning. Instead of string based pattern matching search ZenDown understands and searches notes based on the semantic meaning of the query. 
 
-```bash
-# create a new project in the current directory
-npx sv create
+## Features
 
-# create a new project in my-app
-npx sv create my-app
-```
+- full markdown syntax support including callouts, latex equations and mermaid diagrams
+- Zen mode allows distraction free writing  
+- Semantic search based on actual meaning 
+- Automatic listing of related notes using document embeddings
+- Mobile friendly and responsive design allows you to use on any device
+- Minimal and uncluttered UI that keeps things simple and easy
+- Fast and lightweight editor that remains performant when handling long notes
+- Markdown live preview mode formats and renders markdown even while editing
+- Preview mode to render markdown as a formatted document
+- Keyboard shortcuts for most UI interactions for a fluid experience 
 
-## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
