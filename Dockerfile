@@ -36,11 +36,12 @@ RUN npm ci
 
 # 2b. Copy drizzle config + migrations so drizzle-kit can see them at runtime
 COPY drizzle.config.ts ./
-# COPY drizzle ./drizzle
-COPY src ./src
+# COPY drizzle ./drizzle # If you have pre-existing migrations in a 'drizzle' folder, uncomment this
+COPY . .
 
 # 2c. Bake DATABASE_URL into the image (optional if you set via docker-compose)
-ENV DATABASE_URL="file:local.db"
+# This now points to the conventional path within the volume
+ENV DATABASE_URL="file:/data/local.db"
 ENV AI_SERVER_URL="http://zendown-ai:8000"
 
 # 2d. Copy the built SvelteKit output from the builder stage

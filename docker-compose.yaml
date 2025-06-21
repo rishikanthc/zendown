@@ -6,7 +6,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./db:/db
+      - ./db:/db # This volume is for zendown-ai's own database
     # environment:
     #   - LANCEDB_URI=/db
     restart: unless-stopped
@@ -17,17 +17,23 @@ services:
       dockerfile: Dockerfile
       network: host
       args:
+        # This build-time DATABASE_URL is used during `npm run build`.
+        # The runtime DATABASE_URL (below) is what the entrypoint script will use for migrations.
+        - DATABASE_URL=file:local.db 
         - AI_SERVER_URL=http://zendown-ai:8000
-        - DATABASE_URL=file:local.db
-
     ports:
       - "3000:3000"
+    volumes:
+      - zendown_db_data:/data # Mount the named volume for the database
     environment:
       # This tells your SvelteKit app to call the AI API via Docker networking
       - AI_SERVER_URL=http://zendown-ai:8000
-      # You can set other environment variables here (e.g. DATABASE_URL)
-      - DATABASE_URL=file:local.db
+      # This DATABASE_URL points to the database file inside the mounted volume
+      - DATABASE_URL=file:/data/local.db 
     depends_on:
       - zendown-ai
     restart: unless-stopped
+
+volumes:
+  zendown_db_data: {} # Define the named volume for zendown's database
 
