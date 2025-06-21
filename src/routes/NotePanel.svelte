@@ -24,6 +24,7 @@
 	let relatedNotesError = $state<string | null>(null);
 
 	let isDirty = $state(false);
+	let isZenMode = $state(false);
 
 	let {
 		key,
@@ -234,6 +235,39 @@
 		} else if ((event.ctrlKey || event.metaKey) && event.key === 's') {
 			event.preventDefault();
 			saveNote();
+		} else if ((event.ctrlKey || event.metaKey) && event.key === 'l') {
+			event.preventDefault();
+			toggleZenMode();
+		}
+	}
+
+	function toggleZenMode() {
+		isZenMode = !isZenMode;
+		if (typeof document !== 'undefined') {
+			if (isZenMode) {
+				if (document.documentElement.requestFullscreen) {
+					document.documentElement.requestFullscreen().catch((err) => {
+						console.warn(
+							`Error attempting to enable full-screen mode: ${err.message} (${err.name})`
+						);
+					});
+				}
+			} else {
+				if (document.exitFullscreen && document.fullscreenElement) {
+					document.exitFullscreen().catch((err) => {
+						console.warn(`Error attempting to exit full-screen mode: ${err.message} (${err.name})`);
+					});
+				}
+			}
+		}
+	}
+
+	function handleFullscreenChange() {
+		if (typeof document !== 'undefined' && !document.fullscreenElement) {
+			// If fullscreen was exited (e.g. by pressing ESC), ensure Zen mode is also turned off.
+			if (isZenMode) {
+				isZenMode = false;
+			}
 		}
 	}
 
@@ -302,10 +336,12 @@
 	onMount(() => {
 		if (typeof window !== 'undefined') {
 			window.addEventListener('keydown', handleKeyDown);
+			document.addEventListener('fullscreenchange', handleFullscreenChange);
 		}
 		return () => {
 			if (typeof window !== 'undefined') {
 				window.removeEventListener('keydown', handleKeyDown);
+				document.removeEventListener('fullscreenchange', handleFullscreenChange);
 			}
 			clearTimeout(debounceTimer);
 		};
@@ -313,74 +349,86 @@
 </script>
 
 <Sidebar.Provider>
-	{#if currentNoteId}
+	{#if currentNoteId && !isZenMode}
 		<AppSidebar />
 	{/if}
 
-	<div class="flex min-h-screen w-full flex-col bg-white p-2 dark:bg-gray-900">
-		<header
-			class="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 bg-white px-4 py-3 sm:px-6 dark:bg-gray-800"
-		>
-			<div class="flex flex-shrink-0 items-center gap-2">
-				{#if currentNoteId}
-					<Sidebar.Trigger asChild>
+	<div class="flex min-h-screen w-full flex-col bg-white dark:bg-gray-900" class:p-2={!isZenMode}>
+		{#if !isZenMode}
+			<header
+				class="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 bg-white px-4 py-3 sm:px-6 dark:bg-gray-800"
+			>
+				<div class="flex flex-shrink-0 items-center gap-2">
+					{#if currentNoteId}
+						<Sidebar.Trigger asChild>
+							<Button
+								variant="secondary"
+								size="icon"
+								title="Toggle Sidebar (Ctrl+B or Cmd+B)"
+								class="flex-shrink-0"
+							>
+								<Menu class="h-5 w-5" />
+								<span class="sr-only">Toggle navigation sidebar</span>
+							</Button>
+						</Sidebar.Trigger>
+					{/if}
+					<a
+						href="/"
+						class="rounded-0 inline-flex flex-shrink-0 items-center px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none dark:text-gray-200 dark:hover:bg-gray-700"
+					>
+						Back to Notes
+					</a>
+				</div>
+				<div class="flex items-center gap-2">
+					<div class="relative">
 						<Button
+							onclick={saveNote}
 							variant="secondary"
 							size="icon"
-							title="Toggle Sidebar (Ctrl+B or Cmd+B)"
+							title="Save note (Ctrl+S or Cmd+S)"
 							class="flex-shrink-0"
 						>
-							<Menu class="h-5 w-5" />
-							<span class="sr-only">Toggle navigation sidebar</span>
+							<Save stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
 						</Button>
-					</Sidebar.Trigger>
-				{/if}
-				<a
-					href="/"
-					class="rounded-0 inline-flex flex-shrink-0 items-center px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none dark:text-gray-200 dark:hover:bg-gray-700"
-				>
-					Back to Notes
-				</a>
-			</div>
-			<div class="flex items-center gap-2">
-				<div class="relative">
+						{#if isDirty}
+							<span
+								class="bg-magenta-400 absolute top-0 right-0 -mt-1 -mr-1 flex h-2 w-2 items-center justify-center rounded-full ring-2 ring-white dark:ring-gray-800"
+								title="Unsaved changes"
+							>
+								<span class="sr-only">Unsaved changes</span>
+							</span>
+						{/if}
+					</div>
+
 					<Button
-						onclick={saveNote}
+						onclick={togglePreviewMode}
 						variant="secondary"
 						size="icon"
-						title="Save note (Ctrl+S or Cmd+S)"
+						title="Toggle edit/preview (Ctrl+P or Cmd+P)"
 						class="flex-shrink-0"
 					>
-						<Save stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
+						{#if currentMode === 'write'}
+							<Eye stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
+						{:else}
+							<Pencil stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
+						{/if}
 					</Button>
-					{#if isDirty}
-						<span
-							class="bg-magenta-400 absolute top-0 right-0 -mt-1 -mr-1 flex h-2 w-2 items-center justify-center rounded-full ring-2 ring-white dark:ring-gray-800"
-							title="Unsaved changes"
-						>
-							<span class="sr-only">Unsaved changes</span>
-						</span>
-					{/if}
 				</div>
+			</header>
+		{/if}
+		{#if isDirty && isZenMode}
+			<span
+				class="bg-magenta-400 fixed top-3 right-3 -mt-1 -mr-1 flex h-2 w-2 items-center justify-center rounded-full ring-2 ring-white dark:ring-gray-800"
+				title="Unsaved changes"
+			>
+				<span class="sr-only">Unsaved changes</span>
+			</span>
+		{/if}
 
-				<Button
-					onclick={togglePreviewMode}
-					variant="secondary"
-					size="icon"
-					title="Toggle edit/preview (Ctrl+P or Cmd+P)"
-					class="flex-shrink-0"
-				>
-					{#if currentMode === 'write'}
-						<Eye stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
-					{:else}
-						<Pencil stroke-width={2} class="h-5 w-5 rounded-sm sm:h-6 sm:w-6" />
-					{/if}
-				</Button>
-			</div>
-		</header>
-
+		<!-- Main Content Area: Editor or Preview -->
 		<div
 			class="prose prose-base dark:prose-invert prose-headings:font-[Space_Grotesk] prose-headings:text-gray-800 mx-auto w-full max-w-[800px] flex-grow px-2 py-4 font-[Noto_Sans] text-gray-700 sm:px-4 md:px-6 md:py-6 dark:text-gray-100"
+			class:overflow-y-auto={isZenMode}
 		>
 			{#if currentMode === 'write'}
 				<div class="font-[Space_Mono]">
@@ -393,8 +441,8 @@
 				</div>
 			{:else}
 				{#key noteValue}
+					<!-- Preview Mode -->
 					<Markdown {carta} value={noteValue} />
-
 					<!-- {@html markdownToHtml(noteValue)} -->
 				{/key}
 			{/if}
