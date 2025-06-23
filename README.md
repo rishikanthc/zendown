@@ -21,6 +21,7 @@ Going forward the app will focus on a core set of opinionated features with a st
 ## Features
 
 * full markdown syntax support including callouts, latex equations and mermaid diagrams
+* Also supports block based rich text editing alternative
 * Zen mode allows distraction free writing
 * Semantic search based on actual meaning
 * Automatic listing of related notes using document embeddings
@@ -33,7 +34,7 @@ Going forward the app will focus on a core set of opinionated features with a st
 
 ## Installation
 
-QRding is available as a docker image and can be deployed with the docker-compose provided below.
+ZenDown is available as a docker image and can be deployed with the docker-compose provided below.
 
 ````compose
 services:
@@ -44,7 +45,7 @@ services:
     restart: unless-stopped
 
   zendown:
-    image: ghcr.io/rishikanthc/zendown:v0.1.3
+    image: ghcr.io/rishikanthc/zendown:v0.1.4
     ports:
       - "3000:3000"
     volumes:
@@ -63,14 +64,14 @@ I currently planning to build the following features just to give an idea of the
 * Support for uploading images
 * Tag based organization
 * Automatic summarization of notes
-* Querying system to support [dataview]() like queries
+* Querying system to support [dataview](https://blacksmithgu.github.io/obsidian-dataview/) like queries
 * Learning to auto-tag notes from note data
 * PWA support
 
 # Contributing
 
 Contributions are most welcome!
-If you have any cool ideas / use cases / request for templates / any issues please open an
+If you have any cool ideas / request for features / any issues please open an
 issue in the issue tracker and I’ll get back to you as soon as possible.
 Please follow these steps to contribute to development:
 
