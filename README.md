@@ -72,11 +72,11 @@ To add a new note click the new note button on the home page. For working with r
 
 | Shortcut         | Action                                 |
 |------------------|----------------------------------------|
-| Ctrl/Cmd + S     | Save note                              |
-| Ctrl/Cmd + P     | Toggle between editor and preview modes|
-| Ctrl/Cmd + K     | Open semantic search                   |
-| Ctrl/Cmd + B     | Toggle sidebar visibility              |
-| Ctrl/Cmd + L     | Enable Zen mode for distraction-free writing |
+| Ctrl/Cmd + s     | Save note                              |
+| Ctrl/Cmd + p     | Toggle between editor and preview modes|
+| Ctrl/Cmd + k     | Open semantic search                   |
+| Ctrl/Cmd + b     | Toggle sidebar visibility              |
+| Ctrl/Cmd + l     | Enable Zen mode for distraction-free writing |
 
 
 ## Roadmap
