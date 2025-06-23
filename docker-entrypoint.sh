@@ -2,6 +2,10 @@
 set -e
 
 echo "HELLLOOO WORLD"
+
+touch "/db/local.db"
+
+echo "CREATED EMPTY DB"
 # 1. Apply Drizzle migrations
 echo "⏳ Running migrations..."
 npx drizzle-kit generate

@@ -12,24 +12,21 @@ services:
     restart: unless-stopped
 
   zendown:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      network: host
-      args:
-        # This build-time DATABASE_URL is used during `npm run build`.
-        # The runtime DATABASE_URL (below) is what the entrypoint script will use for migrations.
-        - DATABASE_URL=file:local.db 
-        - AI_SERVER_URL=http://zendown-ai:8000
+    image: ghcr.io/rishikanthc/zendown:v0.1.3
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    #   network: host
+    #   args:
+    #     - DATABASE_URL=file:local.db 
+        # - AI_SERVER_URL=http://zendown-ai:8000
     ports:
       - "3000:3000"
     volumes:
-      - zendown_db_data:/data # Mount the named volume for the database
+      - ./zendown_db_data:/db # Mount the named volume for the database
     environment:
-      # This tells your SvelteKit app to call the AI API via Docker networking
       - AI_SERVER_URL=http://zendown-ai:8000
-      # This DATABASE_URL points to the database file inside the mounted volume
-      - DATABASE_URL=file:/data/local.db 
+      # - DATABASE_URL=file:/data/local.db 
     depends_on:
       - zendown-ai
     restart: unless-stopped
