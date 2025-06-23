@@ -32,6 +32,16 @@ Going forward the app will focus on a core set of opinionated features with a st
 * Preview mode to render markdown
 * Keyboard shortcuts for most UI interactions for a fluid experience
 
+## Screenshots
+
+![Home page](screenshots/home.png)
+
+![Editor](screenshots/editor-panel.png)
+
+![Editor Zen mode](screenshots/editor-zenmode.png)
+
+![Related Notes](screenshots/related-notes.png)
+
 ## Installation
 
 ZenDown is available as a docker image and can be deployed with the docker-compose provided below.
