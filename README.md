@@ -66,6 +66,18 @@ services:
       - zendown-ai
     restart: unless-stopped
 ````
+## Usage and keyboard shortcut
+
+To add a new note click the new note button on the home page. For working with rich text blocks, double click any selected text to show formatting options. Press the + button on a block on the left to insert a new block below. Click and drag the drag handle to reorder blocks.
+
+| Shortcut         | Action                                 |
+|------------------|----------------------------------------|
+| Ctrl/Cmd + S     | Save note                              |
+| Ctrl/Cmd + P     | Toggle between editor and preview modes|
+| Ctrl/Cmd + K     | Open semantic search                   |
+| Ctrl/Cmd + B     | Toggle sidebar visibility              |
+| Ctrl/Cmd + L     | Enable Zen mode for distraction-free writing |
+
 
 ## Roadmap
 
