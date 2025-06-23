@@ -67,6 +67,7 @@ I currently planning to build the following features just to give an idea of the
 * Querying system to support [dataview](https://blacksmithgu.github.io/obsidian-dataview/) like queries
 * Learning to auto-tag notes from note data
 * PWA support
+* Publish notes on the internet publicly
 
 # Contributing
 
