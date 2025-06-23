@@ -1,6 +1,6 @@
 # Zendown
 
-ZenDown is a minimalist self-hostable markdown note taking app. ZenDown features a local ai-engine that generates document embeddings for semantic search and automatic related notes based on a similarity score.
+ZenDown is a minimalist self-hostable markdown note taking app. ZenDown features a local [ai-engine](https://github.com/rishikanthc/zendown-ai) that generates document embeddings for semantic search and automatic related notes based on a similarity score.
 
 ZenDown is ideal for frictionless zettelkasten as it removes the need for manually linking related notes. Related notes are automatically listed for each note. This reduces the cognitive burden of figuring out and connecting related content manually.
 
