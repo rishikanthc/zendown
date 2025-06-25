@@ -55,7 +55,7 @@ services:
     restart: unless-stopped
 
   zendown:
-    image: ghcr.io/rishikanthc/zendown:v0.1.4
+    image: ghcr.io/rishikanthc/zendown:v0.1.5
     ports:
       - "3000:3000"
     volumes:
