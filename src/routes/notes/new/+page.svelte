@@ -1,44 +1,39 @@
 <script lang="ts">
-	import NotePanel from '../../NotePanel.svelte'; // Path relative to this file
+	import NotePanel from '../../NotePanel.svelte';
 	import { goto } from '$app/navigation';
-	import type { Note } from '../../+page.svelte'; // Re-using Note type for clarity, ensure it has canonical_path
 
-	// Define the expected structure of the new note data passed from NotePanel
-	// This should match the structure of a note object, especially needing canonical_path.
-	// The `Note` type from `+page.svelte` might be suitable if it includes `canonical_path`.
-	// Let's assume `Note` type includes `id` and `canonical_path`.
-	// If not, we might need a more specific type like:
-	// type NewNoteReturnData = { id: string; canonical_path: string; [key: string]: any; };
+	// Define a type for the data returned when a new note is created.
+	// It must have a `canonical_path` for navigation.
+	type NewNoteReturnData = {
+		id: string;
+		canonical_path: string;
+		[key: string]: any;
+	};
 
-	async function handleNoteCreated(newNote: Note) {
+	// This function is called by NotePanel after a new note is successfully created.
+	async function handleNoteCreated(newNote: NewNoteReturnData) {
+		// After creating a new note, navigate to its page.
 		if (newNote && newNote.canonical_path) {
-			// Navigate to the newly created note's page
-			// The canonical_path should not have a leading slash if used directly in goto like `/${path}`
-			// If it might, ensure it's handled, or that slugify always returns a clean path.
-			// The current structure seems to be `goto(\`/${newNote.canonical_path}\`)`
-			await goto(`/${newNote.canonical_path}`);
+			// `invalidateAll` ensures the sidebar and other layout data reloads.
+			await goto(`/${newNote.canonical_path}`, { invalidateAll: true });
 		} else {
-			// Fallback or error handling: if navigation fails, go to homepage
-			console.error(
-				'New note created, but canonical_path was missing for navigation. Redirecting to home.'
-			);
+			// As a fallback, go to the homepage if navigation fails.
+			console.error('New note created, but canonical_path was missing. Redirecting to home.');
 			await goto('/');
 		}
 	}
+
+	// Provide a default content for a new note. This ensures the `content` prop
+	// passed to NotePanel is never undefined.
+	const newNoteContent = '# New Note\n\nStart writing...';
 </script>
 
-<div class="w-full min-h-screen bg-white dark:bg-gray-900">
+<div class="h-full w-full">
 	<!--
-		Render NotePanel without `initialContent` or `id` props.
-		This makes NotePanel operate in "new note" mode,
-		loading from localStorage (if anything is there for 'milkdown-editor-content')
-		or using its default new note template.
-		The onNoteCreated callback handles navigation after successful save.
+		Render NotePanel for a new note.
+		- Pass the default content.
+		- Do not pass an `id`, which signals to NotePanel that this is a new note.
+		- Pass the callback to handle navigation after the note is created.
 	-->
-	<NotePanel onNoteCreated={handleNoteCreated} />
+	<NotePanel content={newNoteContent} onNoteCreated={handleNoteCreated} />
 </div>
-
-<style>
-	/* You can add specific styles for the new note page if needed,
-	   or ensure global styles cover its appearance. */
-</style>

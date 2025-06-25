@@ -1,15 +1,13 @@
 <script lang="ts">
+	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import { File } from 'lucide-svelte';
-
-	// Props definition, if any are needed in the future (e.g., currentNoteId for highlighting)
-	// let { currentNoteId: activeNoteId } = $props<{ currentNoteId?: string }>();
+	import { File, User } from 'lucide-svelte';
 
 	type NoteListItem = {
-		id: string; // Used as the key for #each
+		id: string;
 		title: string | null;
-		canonical_path: string; // Used for the href
+		canonical_path: string;
 	};
 
 	let notes = $state<NoteListItem[]>([]);
@@ -20,21 +18,14 @@
 		isLoading = true;
 		errorMessage = null;
 		try {
-			const response = await fetch('/api/notes/titles'); // Standard endpoint for fetching all notes
+			const response = await fetch('/api/notes/titles');
 			if (!response.ok) {
-				let errorBody = { message: response.statusText };
-				try {
-					errorBody = await response.json();
-				} catch (e) {
-					// Ignore if response is not JSON
-				}
+				const errorBody = await response.json().catch(() => ({ message: response.statusText }));
 				throw new Error(
 					`Failed to fetch notes: ${errorBody.message || response.statusText || 'Unknown server error'}`
 				);
 			}
 			const data = await response.json();
-			// Adapt this line based on the actual structure of your API response
-			// e.g., if API returns { data: { notes: [] } }, use data.data.notes
 			const fetchedNotes = data.notes || data;
 
 			if (!Array.isArray(fetchedNotes)) {
@@ -46,7 +37,7 @@
 		} catch (e: any) {
 			console.error('Error fetching notes for sidebar:', e);
 			errorMessage = e.message || 'An unknown error occurred while fetching notes.';
-			notes = []; // Clear notes on error to prevent displaying stale data
+			notes = [];
 		} finally {
 			isLoading = false;
 		}
@@ -54,11 +45,7 @@
 
 	onMount(() => {
 		fetchNotes();
-		// fetchNotes();
 	});
-
-	// This component fetches notes on mount. If it's conditionally rendered (e.g. using #if)
-	// in the parent, onMount will run each time it's "loaded into view".
 </script>
 
 <Sidebar.Root side="left" collapsible="offcanvas" class="border-none bg-gray-50 dark:bg-gray-800">
@@ -108,7 +95,7 @@
 							>
 								{#snippet child({ props: menuButtonProps })}
 									<a
-										href={`${note.canonical_path}`}
+										href="/{note.canonical_path}"
 										{...menuButtonProps}
 										class="m-0 flex w-full shrink-0 items-center gap-1 rounded-xs p-1 text-left text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
 									>
@@ -125,14 +112,36 @@
 			{/if}
 		</Sidebar.Group>
 	</Sidebar.Content>
-	<!-- <Sidebar.Footer /> can be added here if needed -->
+
+	<Sidebar.Footer class="mt-auto border-t border-gray-200 p-2 dark:border-gray-700">
+		{#if $page.data.user}
+			<Sidebar.Menu>
+				<Sidebar.MenuItem>
+					<Sidebar.MenuButton
+						class="w-full justify-start text-sm"
+						aria-label={`Account options for ${$page.data.user.username}`}
+					>
+						{#snippet child({ props: menuButtonProps })}
+							<a
+								href="/account"
+								{...menuButtonProps}
+								class="flex w-full items-center gap-2 rounded-md p-2 text-left text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+							>
+								<User class="h-4 w-4 shrink-0" />
+								<span class="truncate">
+									{$page.data.user.username}
+								</span>
+							</a>
+						{/snippet}
+					</Sidebar.MenuButton>
+				</Sidebar.MenuItem>
+			</Sidebar.Menu>
+		{/if}
+	</Sidebar.Footer>
 </Sidebar.Root>
 
 <style lang="postcss">
-	/* PostCSS can be used for Tailwind directives if needed, or keep it plain CSS */
-	/* Styles specific to AppSidebar, if shadcn defaults & Tailwind utilities aren't enough */
 	:global(body) {
-		/* This ensures that when the sidebar is open, the main content area might need adjustment */
-		/* However, shadcn-svelte's Sidebar.Provider and CSS variables should handle this */
+		/* Sidebar responsive handling is managed by the component library */
 	}
 </style>
