@@ -60,7 +60,7 @@
 			{#each tags as tag (tag)}
 				<a
 					href="/tags/{tag}"
-					class="rounded px-1.5 py-0.5 text-sm font-semibold text-blue-600 transition-colors hover:text-blue-500 hover:underline dark:bg-blue-900/50 dark:text-blue-200"
+					class="rounded px-1.5 py-0.5 font-[Noto_Sans] text-sm font-semibold text-blue-600 transition-colors hover:text-blue-500 hover:underline dark:bg-blue-900/50 dark:text-blue-200"
 					rel="tag"
 				>
 					#{tag}

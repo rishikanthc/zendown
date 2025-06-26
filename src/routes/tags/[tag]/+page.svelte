@@ -45,7 +45,7 @@
 					</Sidebar.Trigger>
 					<h1 class="font-[Space_Grotesk] text-xl text-gray-800 sm:text-2xl dark:text-gray-200">
 						Notes tagged with <span
-							class="rounded-md bg-blue-100 px-2 py-1 font-mono text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
+							class="rounded-md px-2 py-1 font-mono text-blue-600 dark:bg-blue-900/50 dark:text-blue-300"
 							>#{data.tag}</span
 						>
 					</h1>
