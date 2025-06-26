@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Eye, Pencil, Menu, Save, Plus } from 'lucide-svelte';
+	import { Eye, Pencil, Menu, Save, Plus, MoveLeft } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import AppSidebar from '../lib/components/AppSidebar.svelte';
@@ -271,7 +271,7 @@
 							<span class="sr-only">Toggle Sidebar</span>
 						</Sidebar.Trigger>
 					{/if}
-					<Button href="/" variant="ghost" size="sm">Back to Notes</Button>
+					<Button href="/" variant="ghost" size="sm"><MoveLeft size="38" /></Button>
 				</div>
 				<div class="flex items-center gap-2">
 					{#if isLoggedIn}
