@@ -44,7 +44,7 @@
 	});
 </script>
 
-<div class="fixed top-24 right-4 z-40 w-[200px]">
+<div class="w-full px-0 pb-2 md:fixed md:top-24 md:right-4 md:z-40 md:w-[200px] md:p-0">
 	{#if isLoading}
 		<div class="p-2 text-xs text-gray-500 dark:text-gray-400">Loading tags...</div>
 	{:else if errorMessage}
@@ -56,11 +56,11 @@
 			<p>{errorMessage}</p>
 		</div>
 	{:else if tags.length > 0}
-		<div class="flex flex-wrap items-center justify-end gap-1">
+		<div class="flex flex-wrap items-center justify-start gap-1 md:justify-end">
 			{#each tags as tag (tag)}
 				<a
 					href="/tags/{tag}"
-					class="rounded px-1.5 py-0.5 font-[Noto_Sans] text-sm font-semibold text-blue-600 transition-colors hover:text-blue-500 hover:underline dark:bg-blue-900/50 dark:text-blue-200"
+					class="px-1.5 py-0.5 font-[Noto_Sans] text-sm text-black decoration-0 transition-colors hover:text-blue-500 hover:underline dark:bg-blue-900/50 dark:text-blue-200"
 					rel="tag"
 				>
 					#{tag}

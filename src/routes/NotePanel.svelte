@@ -316,14 +316,23 @@
 			</header>
 		{/if}
 
-		{#if currentNoteId && !isZenMode}
-			<Tags noteId={currentNoteId} />
-		{/if}
-
 		<!-- Main Content Area -->
 		<main
 			class="prose prose-base dark:prose-invert prose-headings:font-medium prose-headings:font-[Space_Grotesk] prose-p:font-[Noto_Sans] mx-auto w-full max-w-[800px] flex-grow px-4 py-8 dark:text-gray-300"
 		>
+			<!-- Tags for mobile, shown above content -->
+			<div class="not-prose md:hidden">
+				{#if currentNoteId && !isZenMode}
+					<Tags noteId={currentNoteId} />
+				{/if}
+			</div>
+
+			<!-- Tags for desktop, using fixed positioning from the component -->
+			<div class="hidden md:block">
+				{#if currentNoteId && !isZenMode}
+					<Tags noteId={currentNoteId} />
+				{/if}
+			</div>
 			{#if currentMode === 'write' && isLoggedIn}
 				<div class="font-[Space_Mono]">
 					<MarkdownEditor
