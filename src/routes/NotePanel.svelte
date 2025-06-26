@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Eye, Pencil, Menu, Save, Plus, MoveLeft } from 'lucide-svelte';
+	import { Eye, Pencil, Menu, Save, Plus, MoveLeft, Search } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import AppSidebar from '../lib/components/AppSidebar.svelte';
@@ -10,6 +10,8 @@
 	import { getCartaInstance } from './getCarta';
 	import { Markdown } from 'carta-md';
 	import Tags from '$lib/components/tags/Tags.svelte';
+
+	const openSemanticSearchDialog: () => void = getContext('openSemanticSearchDialog');
 
 	// Types
 	type NewNoteData = any;
@@ -274,6 +276,15 @@
 					<Button href="/" variant="ghost" size="sm"><MoveLeft size="38" /></Button>
 				</div>
 				<div class="flex items-center gap-2">
+					<Button
+						onclick={openSemanticSearchDialog}
+						variant="secondary"
+						size="icon"
+						title="Search (Ctrl+K or Cmd+K)"
+						class="flex-shrink-0"
+					>
+						<Search class="h-5 w-5" />
+					</Button>
 					{#if isLoggedIn}
 						<Button href="/notes/new" variant="secondary" size="sm">
 							<Plus class="mr-1 h-4 w-4" />

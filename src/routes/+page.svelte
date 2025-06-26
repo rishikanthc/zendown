@@ -1,6 +1,6 @@
 <script lang="ts">
 	import NotePanel from './NotePanel.svelte';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 	import { invalidateAll, goto } from '$app/navigation';
 	import type { PageData } from './+page';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -14,12 +14,14 @@
 		AlertDialogHeader,
 		AlertDialogTitle
 	} from '$lib/components/ui/alert-dialog/index.js';
-	import { Trash2 } from 'lucide-svelte';
+	import { Trash2, Search } from 'lucide-svelte';
 
 	// Define the type for a single note based on your PageData structure
 	// This assumes data.notes is an array of objects with at least id, title, canonical_path
 	// and other fields returned by the API (like created_on, modified_on)
 	type Note = NonNullable<PageData['notes']>[number];
+
+	const openSemanticSearchDialog: () => void = getContext('openSemanticSearchDialog');
 
 	let { data }: { data: PageData } = $props();
 
@@ -112,11 +114,22 @@
 	<header class="m-0 w-full bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
 		<div class="container mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
 			<h1 class="font-[Megrim] text-2xl text-blue-600 sm:text-3xl dark:text-blue-400">ZenDown</h1>
-			{#if data.user}
-				<Button onclick={handleNewNoteClick} variant="ghost" size="sm" class="sm:size-md"
-					>New Note</Button
+			<div class="flex items-center gap-2">
+				<Button
+					onclick={openSemanticSearchDialog}
+					variant="ghost"
+					size="icon"
+					title="Search (Ctrl+K or Cmd+K)"
+					class="flex-shrink-0"
 				>
-			{/if}
+					<Search class="h-5 w-5" />
+				</Button>
+				{#if data.user}
+					<Button onclick={handleNewNoteClick} variant="ghost" size="sm" class="sm:size-md"
+						>New Note</Button
+					>
+				{/if}
+			</div>
 		</div>
 	</header>
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, setContext } from 'svelte';
 	import SemanticSearchDialog from '$lib/components/ui/semantic-search-dialog/SemanticSearchDialog.svelte';
 
 	let { children } = $props();
@@ -13,6 +13,8 @@
 			document.body.classList.add('modal-open');
 		}
 	}
+
+	setContext('openSemanticSearchDialog', openSemanticSearchDialog);
 
 	function closeSemanticSearchDialog() {
 		showSemanticSearchDialog = false;
