@@ -2,6 +2,7 @@
 	import NotePanel from './NotePanel.svelte';
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { invalidateAll, goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import type { PageData } from './+page';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import {
@@ -122,7 +123,9 @@
 <div class="min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
 	<header class="m-0 w-full bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
 		<div class="container mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
-			<h1 class="font-[Megrim] text-2xl text-blue-600 sm:text-3xl dark:text-blue-400">ZenDown</h1>
+			<h1 class="font-[Megrim] text-2xl text-blue-600 sm:text-3xl dark:text-blue-400">
+				{$page.data.siteTitle}
+			</h1>
 			<div class="flex items-center gap-2">
 				<Button
 					onclick={openSemanticSearchDialog}

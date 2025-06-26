@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import { page } from '$app/stores';
 	import { onMount, onDestroy, setContext } from 'svelte';
 	import SemanticSearchDialog from '$lib/components/ui/semantic-search-dialog/SemanticSearchDialog.svelte';
 
@@ -58,6 +59,10 @@
 		};
 	});
 </script>
+
+<svelte:head>
+	<title>{$page.data.siteTitle}</title>
+</svelte:head>
 
 {@render children()}
 

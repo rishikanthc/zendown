@@ -52,7 +52,7 @@
 	<Sidebar.Header class="p-3">
 		<Sidebar.Group>
 			<Sidebar.GroupLabel class="font-[Megrim] text-xl text-blue-600 sm:text-2xl dark:text-gray-100"
-				>ZenDown</Sidebar.GroupLabel
+				>{$page.data.siteTitle}</Sidebar.GroupLabel
 			>
 		</Sidebar.Group>
 	</Sidebar.Header>
