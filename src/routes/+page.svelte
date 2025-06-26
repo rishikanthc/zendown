@@ -91,6 +91,15 @@
 		if (typeof window !== 'undefined') {
 			window.addEventListener('keydown', handleGlobalKeyDown);
 		}
+
+		// Clear unauthorized error message after a few seconds
+		if (data.unauthorizedError) {
+			setTimeout(() => {
+				if (data.unauthorizedError) {
+					data.unauthorizedError = null; // Or use a more specific state if needed
+				}
+			}, 3000); // 3 seconds
+		}
 		return () => {
 			if (typeof window !== 'undefined') {
 				window.removeEventListener('keydown', handleGlobalKeyDown);
@@ -103,9 +112,11 @@
 	<header class="m-0 w-full bg-white p-4 sm:p-6 dark:border-gray-700 dark:bg-gray-800">
 		<div class="container mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
 			<h1 class="font-[Megrim] text-2xl text-blue-600 sm:text-3xl dark:text-blue-400">ZenDown</h1>
-			<Button onclick={handleNewNoteClick} variant="ghost" size="sm" class="sm:size-md"
-				>New Note</Button
-			>
+			{#if data.user}
+				<Button onclick={handleNewNoteClick} variant="ghost" size="sm" class="sm:size-md"
+					>New Note</Button
+				>
+			{/if}
 		</div>
 	</header>
 
@@ -126,6 +137,14 @@
 			</div>
 		{/if}
 
+		{#if data.unauthorizedError}
+			<div
+				class="my-4 rounded border border-red-400 bg-red-100 p-3 text-sm text-red-700 sm:p-4 sm:text-base dark:border-red-600 dark:bg-red-900 dark:text-red-200"
+			>
+				<p>{data.unauthorizedError}</p>
+			</div>
+		{/if}
+
 		{#if data.notes && data.notes.length > 0}
 			<ul class="mt-4 space-y-0">
 				{#each data.notes as note (note.id)}
@@ -138,15 +157,17 @@
 						>
 							{note.title || 'Untitled Note'}
 						</a>
-						<Button
-							variant="ghost"
-							size="icon"
-							class="mr-1 flex-shrink-0 text-gray-500 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:text-red-600 focus:opacity-100 dark:text-gray-400 dark:hover:text-red-500"
-							onclick={() => openDeleteDialog(note.id, note.title || 'Untitled Note')}
-							aria-label="Delete note"
-						>
-							<Trash2 class="h-4 w-4 sm:h-5 sm:w-5" />
-						</Button>
+						{#if data.user}
+							<Button
+								variant="ghost"
+								size="icon"
+								class="mr-1 flex-shrink-0 text-gray-500 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:text-red-600 focus:opacity-100 dark:text-gray-400 dark:hover:text-red-500"
+								onclick={() => openDeleteDialog(note.id, note.title || 'Untitled Note')}
+								aria-label="Delete note"
+							>
+								<Trash2 class="h-4 w-4 sm:h-5 sm:w-5" />
+							</Button>
+						{/if}
 					</li>
 				{/each}
 			</ul>
