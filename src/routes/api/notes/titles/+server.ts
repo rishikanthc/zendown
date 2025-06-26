@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
+import { desc } from 'drizzle-orm';
 
 export const GET: RequestHandler = async () => {
 	try {
@@ -14,7 +15,7 @@ export const GET: RequestHandler = async () => {
 				modified_on: schema.note.modified_on
 			})
 			.from(schema.note)
-			.orderBy(schema.note.modified_on); // Or schema.note.title, or schema.note.created_on
+			.orderBy(desc(schema.note.modified_on)); // Sort by most recently modified
 
 		return json(notes, { status: 200 });
 	} catch (error) {

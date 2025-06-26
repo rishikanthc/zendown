@@ -23,7 +23,7 @@
 
 	const openSemanticSearchDialog: () => void = getContext('openSemanticSearchDialog');
 
-	let { data }: { data: PageData } = $props();
+	let { data }: { data: PageData & { user?: any; unauthorizedError?: string | null } } = $props();
 
 	let showDeleteDialog = $state(false);
 	let noteIdToDelete = $state<string | null>(null);
@@ -87,6 +87,15 @@
 		} finally {
 			isDeleting = false;
 		}
+	}
+
+	function formatDate(dateString: string): string {
+		if (!dateString) return '';
+		const date = new Date(dateString);
+		const month = (date.getMonth() + 1).toString().padStart(2, '0');
+		const day = date.getDate().toString().padStart(2, '0');
+		const year = date.getFullYear();
+		return `${month}-${day}-${year}`;
 	}
 
 	onMount(() => {
@@ -166,9 +175,16 @@
 					>
 						<a
 							href="/{note.canonical_path}"
-							class="block flex-grow truncate px-2 py-1 font-[Space_Grotesk] text-base text-gray-800 hover:text-blue-600 hover:underline sm:text-base dark:text-gray-200"
+							class="flex flex-grow items-center gap-4 truncate px-2 py-1 text-base text-gray-800 hover:text-blue-600 sm:text-base dark:text-gray-200"
 						>
-							{note.title || 'Untitled Note'}
+							<span
+								class="hidden w-24 flex-shrink-0 font-mono text-xs text-gray-500 sm:inline-block dark:text-gray-400"
+							>
+								{formatDate(note.modified_on)}
+							</span>
+							<span class="flex-grow truncate font-[Space_Grotesk] group-hover:underline">
+								{note.title || 'Untitled Note'}
+							</span>
 						</a>
 						{#if data.user}
 							<Button
