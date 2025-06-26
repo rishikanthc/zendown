@@ -194,7 +194,14 @@
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
-		if (!isLoggedIn) return; // Disable all shortcuts if not logged in
+		// Zen mode: Ctrl/Cmd + L (available for everyone)
+		if ((event.ctrlKey || event.metaKey) && event.key === 'l') {
+			event.preventDefault();
+			toggleZenMode();
+		}
+
+		// The following shortcuts are only for logged-in users.
+		if (!isLoggedIn) return;
 
 		if ((event.ctrlKey || event.metaKey) && event.key === 'p') {
 			event.preventDefault();
@@ -202,9 +209,6 @@
 		} else if ((event.ctrlKey || event.metaKey) && event.key === 's') {
 			event.preventDefault();
 			saveNote();
-		} else if ((event.ctrlKey || event.metaKey) && event.key === 'l') {
-			event.preventDefault();
-			toggleZenMode();
 		}
 	}
 
