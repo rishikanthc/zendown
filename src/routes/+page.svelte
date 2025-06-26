@@ -134,7 +134,7 @@
 					>
 						<a
 							href="/{note.canonical_path}"
-							class="block flex-grow truncate px-2 py-1 font-[Space_Grotesk] text-sm text-gray-800 hover:text-blue-600 hover:underline sm:text-base dark:text-gray-200"
+							class="block flex-grow truncate px-2 py-1 font-[Space_Grotesk] text-base text-gray-800 hover:text-blue-600 hover:underline sm:text-base dark:text-gray-200"
 						>
 							{note.title || 'Untitled Note'}
 						</a>
