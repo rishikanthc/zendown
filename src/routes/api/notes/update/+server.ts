@@ -3,13 +3,17 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
 import { eq, and, ne } from 'drizzle-orm';
-import {
-	slugify,
-	extractTitleFromMarkdownServer
-} from '$lib/server/utils';
+import { slugify, extractTitleFromMarkdownServer } from '$lib/server/utils';
 import { AI_SERVER_URL } from '$env/static/private';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	if (!locals.user) {
+		return json(
+			{ message: 'Unauthorized. You must be logged in to update a note.' },
+			{ status: 401 }
+		);
+	}
+
 	let requestData;
 	try {
 		requestData = await request.json();
@@ -55,12 +59,9 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (typeof rawTags === 'string' && rawTags.trim() !== '') {
 		tagsValue = rawTags.trim();
 	} else if (Array.isArray(rawTags) && rawTags.length > 0) {
-		tagsValue = rawTags
-			.filter((tag) => typeof tag === 'string' && tag.trim() !== '')
-			.join(',');
+		tagsValue = rawTags.filter((tag) => typeof tag === 'string' && tag.trim() !== '').join(',');
 		if (tagsValue === '') tagsValue = null;
 	}
-
 
 	const now = new Date();
 
@@ -83,7 +84,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		};
 
 		// Check if the title or canonical path needs to be updated
-		if (newTrimmedTitle !== existingNote.title || newCanonicalPath !== existingNote.canonical_path) {
+		if (
+			newTrimmedTitle !== existingNote.title ||
+			newCanonicalPath !== existingNote.canonical_path
+		) {
 			updatePayload.title = newTrimmedTitle; // Always update title if it's different (even if only casing)
 
 			if (newCanonicalPath !== existingNote.canonical_path) {
@@ -110,7 +114,6 @@ export const POST: RequestHandler = async ({ request }) => {
 				updatePayload.canonical_path = newCanonicalPath;
 			}
 		}
-
 
 		const [updatedResult] = await db
 			.update(schema.note)
@@ -153,9 +156,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					);
 				} else {
 					// const responseData = await aiResponse.json();
-					console.log(
-						`Successfully upserted updated note ${updatedResult.id} to AI server.`
-					);
+					console.log(`Successfully upserted updated note ${updatedResult.id} to AI server.`);
 				}
 			} catch (aiError) {
 				// Log network or other errors calling AI server but don't fail the main operation
@@ -165,11 +166,12 @@ export const POST: RequestHandler = async ({ request }) => {
 				);
 			}
 		} else {
-			console.warn(`Could not upsert updated note to AI server: updatedResult or its properties (id, content) are missing or invalid. ID: ${updatedResult?.id}`);
+			console.warn(
+				`Could not upsert updated note to AI server: updatedResult or its properties (id, content) are missing or invalid. ID: ${updatedResult?.id}`
+			);
 		}
 
 		return json(updatedResult, { status: 200 });
-
 	} catch (error: any) {
 		console.error(`Error updating note with ID '${noteId}':`, error);
 		// Check for unique constraint violation on canonical_path if the explicit check somehow missed it
@@ -186,6 +188,9 @@ export const POST: RequestHandler = async ({ request }) => {
 				{ status: 409 } // Conflict
 			);
 		}
-		return json({ message: 'An unexpected error occurred on the server while updating the note.' }, { status: 500 });
+		return json(
+			{ message: 'An unexpected error occurred on the server while updating the note.' },
+			{ status: 500 }
+		);
 	}
 };

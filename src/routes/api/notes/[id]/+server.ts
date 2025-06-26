@@ -32,7 +32,15 @@ export const GET: RequestHandler = async ({ params }) => {
 	}
 };
 
-export const DELETE: RequestHandler = async ({ params }) => {
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+	// Check if the user is authenticated
+	if (!locals.user) {
+		return json(
+			{ message: 'Unauthorized. You must be logged in to delete a note.' },
+			{ status: 401 }
+		);
+	}
+
 	const noteId = params.id;
 
 	if (!noteId || noteId.trim() === '') {
