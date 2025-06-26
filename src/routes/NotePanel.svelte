@@ -9,6 +9,7 @@
 	import MarkdownEditor from './MarkdownEditor.svelte';
 	import { getCartaInstance } from './getCarta';
 	import { Markdown } from 'carta-md';
+	import Tags from '$lib/components/tags/Tags.svelte';
 
 	// Types
 	type NewNoteData = any;
@@ -309,6 +310,10 @@
 					{/if}
 				</div>
 			</header>
+		{/if}
+
+		{#if currentNoteId && !isZenMode}
+			<Tags noteId={currentNoteId} />
 		{/if}
 
 		<!-- Main Content Area -->
