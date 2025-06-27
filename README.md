@@ -31,6 +31,10 @@ Going forward the app will focus on a core set of opinionated features with a st
 * Markdown live preview mode renders markdown while editing
 * Preview mode to render markdown
 * Keyboard shortcuts for most UI interactions for a fluid experience
+* modifying notes protected by admin login
+* dark mode
+* support for tags
+
 
 ## Screenshots
 
@@ -84,7 +88,6 @@ To add a new note click the new note button on the home page. For working with r
 I currently planning to build the following features just to give an idea of the direction the project is headed in. I’m open to feature requests if they solve a meaningful problem in note taking:
 
 * Support for uploading images
-* Tag based organization
 * Automatic summarization of notes
 * Querying system to support [dataview](https://blacksmithgu.github.io/obsidian-dataview/) like queries
 * Learning to auto-tag notes from note data
