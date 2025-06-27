@@ -4,6 +4,14 @@
 FROM node:lts-bullseye AS builder
 WORKDIR /app
 
+# Declare build-time arguments. SvelteKit will use these during the build process
+# for any statically-referenced environment variables.
+ARG DATABASE_URL
+ARG AI_SERVER_URL
+ARG ADMIN_USERNAME
+ARG ADMIN_PASSWORD
+ARG PUBLIC_SITE_TITLE
+
 # Copy and install dependencies
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -28,7 +36,7 @@ COPY drizzle ./drizzle
 COPY src ./src
 
 # COPY migrations ./migrations
-# 
+#
 # Make sure the db directory exists (for first run)
 RUN mkdir -p /db
 VOLUME ["/db"]
@@ -51,7 +59,18 @@ EXPOSE 3000
 
 # Set defaults (overridable in Compose)
 ARG AI_SERVER_URL
+ARG ADMIN_USERNAME
+ARG ADMIN_PASSWORD
+ARG PUBLIC_SITE_TITLE
+ARG DATABASE_URL
+ARG SITE_ADDRESS
+
 ENV DATABASE_URL="file:/db/local.db"
+ENV AI_SERVER_URL=${AI_SERVER_URL}
+ENV ADMIN_USERNAME=${ADMIN_USERNAME}
+ENV ADMIN_PASSWORD=${ADMIN_PASSWORD}
+ENV PUBLIC_SITE_TITLE=${PUBLIC_SITE_TITLE}
+ENV SITE_ADDRESS=${SITE_ADDRESS}
 # ENV AI_SERVER_URL="http://zendown-ai:8000"
 
 ENTRYPOINT ["docker-entrypoint.sh"]

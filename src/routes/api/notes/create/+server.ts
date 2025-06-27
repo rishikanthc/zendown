@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { generateNoteId, slugify, extractTitleFromMarkdownServer } from '$lib/server/utils';
-import { AI_SERVER_URL } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	// Check if the user is authenticated
@@ -114,7 +114,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					id: insertedResult.id,
 					content: insertedResult.content
 				};
-				const aiUpsertEndpoint = AI_SERVER_URL + '/api/upsert/';
+				const aiUpsertEndpoint = env.AI_SERVER_URL + '/api/upsert/';
 
 				// console.log(`Attempting to upsert to AI: ${JSON.stringify(aiUpsertPayload)} at ${aiUpsertEndpoint}`);
 

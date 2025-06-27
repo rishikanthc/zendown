@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
 import { eq, and, ne } from 'drizzle-orm';
 import { slugify, extractTitleFromMarkdownServer } from '$lib/server/utils';
-import { AI_SERVER_URL } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) {
@@ -136,7 +136,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					id: updatedResult.id,
 					content: updatedResult.content
 				};
-				const aiUpsertEndpoint = AI_SERVER_URL + '/api/upsert/';
+				const aiUpsertEndpoint = env.AI_SERVER_URL + '/api/upsert/';
 
 				// console.log(`Attempting to upsert updated note to AI: ${JSON.stringify(aiUpsertPayload)} at ${aiUpsertEndpoint}`);
 

@@ -1,0 +1,38 @@
+# Docker files
+Dockerfile
+docker-compose.yml
+docker-compose.yaml
+.dockerignore
+
+# Git files
+.git
+.gitignore
+
+# Node dependencies
+node_modules
+
+# SvelteKit build/cache directory
+.svelte-kit
+build/
+dist/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Local database files
+*.db
+*.db-journal
+/db
+/zendown_db_data
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS-generated files
+.DS_Store
+Thumbs.db

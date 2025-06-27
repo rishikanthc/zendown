@@ -6,7 +6,7 @@ import * as auth from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import type { Actions, PageServerLoad } from './$types';
-import { ADMIN_USERNAME, ADMIN_PASSWORD } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
@@ -31,7 +31,7 @@ export const actions: Actions = {
 		}
 
 		// Check if the provided username is the admin username from environment variables
-		if (username !== ADMIN_USERNAME) {
+		if (username !== env.ADMIN_USERNAME) {
 			return fail(400, { message: 'Incorrect username or password' });
 		}
 
@@ -54,7 +54,7 @@ export const actions: Actions = {
 					// This case can happen if the admin password in the .env was changed
 					// For security, we can either deny access or update the hash.
 					// Let's update the hash to reflect the .env file as the source of truth.
-					const newPasswordHash = await hash(ADMIN_PASSWORD, {
+					const newPasswordHash = await hash(env.ADMIN_PASSWORD, {
 						memoryCost: 19456,
 						timeCost: 2,
 						outputLen: 32,
@@ -78,12 +78,12 @@ export const actions: Actions = {
 				auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
 			} else {
 				// User does not exist, this is the first login. Create the admin user.
-				if (password !== ADMIN_PASSWORD) {
+				if (password !== env.ADMIN_PASSWORD) {
 					return fail(400, { message: 'Incorrect username or password' });
 				}
 
 				const userId = generateUserId();
-				const passwordHash = await hash(ADMIN_PASSWORD, {
+				const passwordHash = await hash(env.ADMIN_PASSWORD, {
 					memoryCost: 19456,
 					timeCost: 2,
 					outputLen: 32,
