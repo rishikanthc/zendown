@@ -20,11 +20,15 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
+import Mathematics from '@tiptap/extension-mathematics';
 import { MarkdownLink } from '../../extensions/markdown-link';
 import { Callout, CalloutNode } from '../../extensions/callout';
 import { api } from '../../api';
 import TableOfContents from '@tiptap/extension-table-of-contents';
 import { getHierarchicalIndexes } from '@tiptap/extension-table-of-contents';
+
+// Import KaTeX CSS for mathematics rendering
+import 'katex/dist/katex.min.css';
 
 export interface EditorState {
 	isBold: boolean;
@@ -56,7 +60,7 @@ export function createEditor(element: HTMLElement, options: {
 	// Create lowlight instance
 	const lowlight = createLowlight(all);
 
-	return new Editor({
+			return new Editor({
 		element: element,
 		extensions: [
 			StarterKit.configure({
@@ -117,6 +121,15 @@ export function createEditor(element: HTMLElement, options: {
 				},
 			}),
 			Typography,
+			Mathematics.configure({
+				katexOptions: {
+					maxSize: 300,
+				},
+				shouldRender: (state, pos, node) => {
+					const $pos = state.doc.resolve(pos);
+					return node.type.name === 'text' && $pos.parent.type.name !== 'codeBlock';
+				},
+			}),
 			Table.configure({
 				resizable: true,
 				HTMLAttributes: {

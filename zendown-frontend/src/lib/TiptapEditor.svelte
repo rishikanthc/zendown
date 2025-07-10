@@ -1161,6 +1161,24 @@
 		font-style: italic;
 	}
 
+	/* Mathematics decorations */
+	:global(.Tiptap-mathematics-editor) {
+		background-color: #f3f4f6;
+		border: 1px solid #d1d5db;
+		border-radius: 0.375rem;
+		padding: 0.25rem 0.5rem;
+		font-family: 'Courier New', monospace;
+		font-size: 0.875rem;
+		color: #374151;
+		margin: 0 0.125rem;
+	}
+
+	:global(.Tiptap-mathematics-render) {
+		display: inline-block;
+		margin: 0 0.125rem;
+		vertical-align: middle;
+	}
+
 
 </style>
 

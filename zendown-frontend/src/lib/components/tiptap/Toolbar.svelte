@@ -19,6 +19,7 @@
 	import MinusIcon from '@lucide/svelte/icons/minus';
 	import UndoIcon from '@lucide/svelte/icons/undo';
 	import RedoIcon from '@lucide/svelte/icons/redo';
+	import SquareFunctionIcon from '@lucide/svelte/icons/square-function';
 
 	interface Props {
 		editor: Editor | null;
@@ -148,7 +149,7 @@
 
 		<div class="w-px h-4 bg-border"></div>
 
-		<!-- Links and Tables -->
+		<!-- Links, Tables, and Math -->
 		<div class="flex items-center gap-1">
 			<button 
 				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isLink ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
@@ -163,6 +164,18 @@
 				title="Insert Table"
 			>
 				<TableIcon class="h-4 w-4" />
+			</button>
+			<button 
+				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+				onclick={() => {
+					const mathExpression = prompt('Enter LaTeX math expression (e.g., \\frac{1}{2}):');
+					if (mathExpression && editor) {
+						editor.chain().focus().insertContent(`$${mathExpression}$`).run();
+					}
+				}}
+				title="Insert Math Expression"
+			>
+				<SquareFunctionIcon class="h-4 w-4" />
 			</button>
 		</div>
 
