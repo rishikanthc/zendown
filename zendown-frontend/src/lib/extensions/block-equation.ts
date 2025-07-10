@@ -17,6 +17,7 @@ export const BlockEquationNode = Node.create({
 				parseHTML: element => {
 					const content = element.getAttribute('data-content') || '';
 					console.log('🔍 BlockEquation: parseHTML - raw content from element:', JSON.stringify(content));
+					// Don't do any processing here - return the content as-is
 					return content;
 				},
 				renderHTML: attributes => {
@@ -44,13 +45,13 @@ export const BlockEquationNode = Node.create({
 		let content = HTMLAttributes.content || HTMLAttributes['data-content'] || '';
 		console.log('🔍 BlockEquation: Content from attributes:', content);
 		
-		// Clean up the content - remove quotes and unescape backslashes
+		// Clean up the content - remove quotes but preserve LaTeX line breaks
 		if (typeof content === 'string') {
 			// Remove outer quotes if present (handle both single and double quotes)
 			content = content.replace(/^["']|["']$/g, '');
 			
-			// Unescape backslashes (convert \\ to \)
-			content = content.replace(/\\\\/g, '\\');
+			// IMPORTANT: Don't unescape backslashes here as it breaks LaTeX line breaks
+			// LaTeX uses \\ for line breaks, so we need to preserve them
 			
 			// Remove any remaining quotes that might be inside the content
 			content = content.replace(/^["']|["']$/g, '');
@@ -171,9 +172,10 @@ export const BlockEquation = Extension.create({
 										event.preventDefault();
 										
 										// Create the block equation node with the full equation including $$ delimiters
-										// Don't escape backslashes - store the raw LaTeX content
+										// Store the raw LaTeX content without any escaping
 										const fullEquation = `$$${equationContent.trim()}$$`;
 										console.log('🔍 BlockEquation: Creating block equation with content:', fullEquation);
+										console.log('🔍 BlockEquation: Raw equation content before storage:', equationContent.trim());
 										console.log('🔍 BlockEquation: Content being stored in node:', JSON.stringify(fullEquation));
 										const blockEquationNode = state.schema.nodes.blockEquationNode.create(
 											{ content: fullEquation }
@@ -272,9 +274,10 @@ export const BlockEquation = Extension.create({
 								console.log('🔍 BlockEquation: Found complete block equation with content:', JSON.stringify(equationContent));
 								
 								// Create the block equation node with the full equation including $$ delimiters
-								// Don't escape backslashes - store the raw LaTeX content
+								// Store the raw LaTeX content without any escaping
 								const fullEquation = `$$${equationContent.trim()}$$`;
 								console.log('🔍 BlockEquation: Creating block equation with content:', fullEquation);
+								console.log('🔍 BlockEquation: Raw equation content before storage:', equationContent.trim());
 								console.log('🔍 BlockEquation: Content being stored in node (appendTransaction):', JSON.stringify(fullEquation));
 								const blockEquationNode = newState.schema.nodes.blockEquationNode.create(
 									{ content: fullEquation }
