@@ -23,6 +23,7 @@ import TableHeader from '@tiptap/extension-table-header';
 import Mathematics from '@tiptap/extension-mathematics';
 import { MarkdownLink } from '../../extensions/markdown-link';
 import { Callout, CalloutNode } from '../../extensions/callout';
+import { BlockEquation, BlockEquationNode } from '../../extensions/block-equation';
 import { api } from '../../api';
 import TableOfContents from '@tiptap/extension-table-of-contents';
 import { getHierarchicalIndexes } from '@tiptap/extension-table-of-contents';
@@ -109,6 +110,8 @@ export function createEditor(element: HTMLElement, options: {
 			}),
 			CalloutNode,
 			Callout,
+			BlockEquationNode,
+			BlockEquation,
 			HorizontalRule.configure({
 				HTMLAttributes: {
 					class: 'border-t border-gray-300 my-4',

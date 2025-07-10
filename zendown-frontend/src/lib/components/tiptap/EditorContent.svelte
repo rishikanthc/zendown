@@ -553,6 +553,29 @@
 		font-size: inherit;
 	}
 
+	/* Block Equations */
+	:global(.ProseMirror .block-equation) {
+		margin: 1.5rem 0;
+		text-align: center;
+	}
+
+	:global(.ProseMirror .block-equation .katex-display) {
+		margin: 0;
+		padding: 1rem;
+		background-color: #f8fafc;
+		border-radius: 0.5rem;
+		border: 1px solid #e2e8f0;
+	}
+
+	:global(.ProseMirror .block-equation .katex-error) {
+		color: #ef4444;
+		font-family: 'JetBrains Mono', 'Fira Code', 'IBM Plex Mono', monospace;
+		background-color: #fef2f2;
+		padding: 0.5rem;
+		border-radius: 0.25rem;
+		border: 1px solid #fecaca;
+	}
+
 	/* Images */
 	:global(.ProseMirror img) {
 		max-width: 100%;
