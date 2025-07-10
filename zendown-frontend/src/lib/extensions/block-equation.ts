@@ -1,5 +1,6 @@
 import { Node, Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import katex from 'katex';
 
 // Custom Block Equation Node
@@ -34,6 +35,12 @@ export const BlockEquationNode = Node.create({
 		return [
 			{
 				tag: 'div[data-block-equation]',
+				getAttrs: (element) => {
+					// Extract the content from the data-content attribute
+					const content = element.getAttribute('data-content');
+					console.log('🔍 BlockEquation: parseHTML - parsing element with content:', JSON.stringify(content));
+					return { content };
+				},
 			},
 		];
 	},
@@ -84,15 +91,15 @@ export const BlockEquationNode = Node.create({
 			renderedContent = `<span class="katex-error">${content}</span>`;
 		}
 
-		// Create a DOM element to render the KaTeX content
-		const container = document.createElement('div');
-		container.className = 'block-equation';
-		container.setAttribute('data-block-equation', 'true');
-		container.style.margin = '1em 0';
-		container.style.textAlign = 'center';
-		container.innerHTML = renderedContent;
-
-		return container;
+		return [
+			'div',
+			{
+				class: 'block-equation',
+				'data-block-equation': 'true',
+				style: 'margin: 1em 0; text-align: center;',
+				...HTMLAttributes,
+			}
+		];
 	},
 });
 
@@ -103,6 +110,48 @@ export const BlockEquation = Extension.create({
 		console.log('🔍 BlockEquation: Extension loaded and ProseMirror plugins added');
 		
 		return [
+			// Decoration plugin to render KaTeX content
+			new Plugin({
+				key: new PluginKey('blockEquationDecoration'),
+				props: {
+					decorations: (state) => {
+						const { doc } = state;
+						const decorations: Decoration[] = [];
+						
+						doc.descendants((node, pos) => {
+							if (node.type.name === 'blockEquationNode') {
+								const content = node.attrs.content || '';
+								if (content) {
+									try {
+										// Clean up the content
+										let latexContent = content.replace(/^\$\$|\$\$$/g, '').trim();
+										latexContent = latexContent.replace(/^["']|["']$/g, '');
+										
+										// Render with KaTeX
+										const renderedContent = katex.renderToString(latexContent, {
+											displayMode: true,
+											throwOnError: false,
+										});
+										
+										// Create decoration
+										const decoration = Decoration.widget(pos, () => {
+											const div = document.createElement('div');
+											div.innerHTML = renderedContent;
+											return div;
+										});
+										
+										decorations.push(decoration);
+									} catch (error) {
+										console.error('KaTeX rendering error in decoration:', error);
+									}
+								}
+							}
+						});
+						
+						return DecorationSet.create(doc, decorations);
+					},
+				},
+			}),
 			new Plugin({
 				key: new PluginKey('blockEquation'),
 				props: {
