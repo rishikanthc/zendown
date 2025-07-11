@@ -27,3 +27,4 @@ vite.config.ts.timestamp-*
 *.db
 zendown
 zendown-backend/README.md
+attachments
