@@ -90,9 +90,9 @@
 	}
 
 	// Load notes for a specific collection
-	async function loadCollectionNotes(collectionId: number) {
-		console.log('Loading notes for collection:', collectionId);
-		if (collectionNotes[collectionId]) {
+	async function loadCollectionNotes(collectionId: number, forceReload = false) {
+		console.log('Loading notes for collection:', collectionId, 'forceReload:', forceReload);
+		if (collectionNotes[collectionId] && !forceReload) {
 			console.log('Notes already loaded for collection:', collectionId);
 			return; // Already loaded
 		}
@@ -109,6 +109,19 @@
 		} finally {
 			isLoadingCollectionNotes[collectionId] = false;
 		}
+	}
+
+	// Refresh collection notes for a specific collection
+	async function refreshCollectionNotes(collectionId: number) {
+		await loadCollectionNotes(collectionId, true);
+	}
+
+	// Refresh all currently expanded collections
+	async function refreshAllExpandedCollections() {
+		const promises = expandedCollections.map(collectionId => 
+			refreshCollectionNotes(collectionId)
+		);
+		await Promise.all(promises);
 	}
 
 	// Toggle collection expansion
@@ -389,14 +402,29 @@
 	}
 
 	// Collections event handlers
-	function handleAddCollection(event: CustomEvent<{ noteId: number; collectionName: string }>) {
+	async function handleAddCollection(event: CustomEvent<{ noteId: number; collectionName: string }>) {
 		const { noteId, collectionName } = event.detail;
 		toast.success(`Added to "${collectionName}" collection`);
+		
+		// Reload collections to get the new collection if it was created
+		await loadCollections();
+		
+		// If the collection is currently expanded, refresh its notes
+		const collection = collections.find(c => c.name === collectionName);
+		if (collection && expandedCollections.includes(collection.id)) {
+			await refreshCollectionNotes(collection.id);
+		}
 	}
 
-	function handleRemoveCollection(event: CustomEvent<{ noteId: number; collectionName: string }>) {
+	async function handleRemoveCollection(event: CustomEvent<{ noteId: number; collectionName: string }>) {
 		const { noteId, collectionName } = event.detail;
 		toast.success(`Removed from "${collectionName}" collection`);
+		
+		// If the collection is currently expanded, refresh its notes
+		const collection = collections.find(c => c.name === collectionName);
+		if (collection && expandedCollections.includes(collection.id)) {
+			await refreshCollectionNotes(collection.id);
+		}
 	}
 
 	// Handle content changes from TiptapEditor
@@ -421,6 +449,13 @@
 			// Clear related notes when no note is selected
 			relatedNotes = [];
 			relatedNotesError = '';
+		}
+	});
+
+	// Reactive effect to reload collections when tab changes to collections
+	$effect(() => {
+		if (activeTab === 'collections') {
+			loadCollections();
 		}
 	});
 </script>

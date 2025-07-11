@@ -58,8 +58,8 @@
 	}
 
 	// Load notes for a specific collection
-	async function loadCollectionNotes(collectionId: number) {
-		if (collectionNotes[collectionId]) return; // Already loaded
+	async function loadCollectionNotes(collectionId: number, forceReload = false) {
+		if (collectionNotes[collectionId] && !forceReload) return; // Already loaded
 		
 		try {
 			isLoadingCollectionNotes[collectionId] = true;
@@ -71,6 +71,11 @@
 		} finally {
 			isLoadingCollectionNotes[collectionId] = false;
 		}
+	}
+
+	// Refresh collection notes for a specific collection
+	async function refreshCollectionNotes(collectionId: number) {
+		await loadCollectionNotes(collectionId, true);
 	}
 
 	// Toggle collection expansion
@@ -159,6 +164,13 @@
 	onMount(() => {
 		loadAttachments();
 		loadCollections();
+	});
+
+	// Reactive effect to reload collections when tab changes to collections
+	$effect(() => {
+		if (activeTab === 'collections') {
+			loadCollections();
+		}
 	});
 </script>
 
