@@ -20,8 +20,19 @@ import (
 var embeddedFS embed.FS
 
 func main() {
+	// Create data directory if it doesn't exist
+	if err := os.MkdirAll("data", 0755); err != nil {
+		log.Fatal("Failed to create data directory:", err)
+	}
+
+	// Create attachments directory if it doesn't exist
+	if err := os.MkdirAll("attachments", 0755); err != nil {
+		log.Fatal("Failed to create attachments directory:", err)
+	}
+
 	// Initialize database
-	db, err := database.NewDB("zendown.db")
+	dbPath := "data/zendown.db"
+	db, err := database.NewDB(dbPath)
 	if err != nil {
 		log.Fatal("Failed to initialize database:", err)
 	}
@@ -56,7 +67,7 @@ func main() {
 
 	log.Printf("🚀 Starting Zendown server on port %s", port)
 	log.Printf("📱 Open your browser and navigate to: http://localhost:%s", port)
-	log.Printf("🗄️  Database file: zendown.db")
+	log.Printf("🗄️  Database file: %s", dbPath)
 
 	if err := http.ListenAndServe(":"+port, router); err != nil {
 		log.Fatalf("server failed to start: %v", err)

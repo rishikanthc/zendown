@@ -1,38 +1,51 @@
-# Docker files
-Dockerfile
-docker-compose.yml
-docker-compose.yaml
-.dockerignore
-
-# Git files
+# Git
 .git
 .gitignore
 
-# Node dependencies
-node_modules
+# Documentation
+README.md
+DOCKER_README.md
+LICENSE
 
-# SvelteKit build/cache directory
-.svelte-kit
+# Build artifacts
+zendown
 build/
 dist/
 
-# Local environment files
-.env
-.env.*
-!.env.example
+# Node modules (will be installed in container)
+zendown-frontend/node_modules/
+zendown-frontend/.svelte-kit/
 
-# Local database files
-*.db
-*.db-journal
-/db
-/zendown_db_data
+# Go build cache
+zendown-backend/zendown
 
-# Log files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# OS-generated files
+# OS files
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Data directories (will be mounted as volumes)
+data/
+attachments/
+
+# Docker files (except the one we're using)
+Dockerfile.alpine
+zendown-backend/Dockerfile.alpine
+zendown-backend/docker-compose.yml
+
+# Screenshots
+screenshots/
+
+# Test files
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
