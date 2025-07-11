@@ -42,10 +42,6 @@
 	let isZenMode = $state(false);
 	let previousSidebarState = $state(true); // Store sidebar state before entering zen mode
 
-	// Collections state
-	let allCollections = $state<string[]>([]);
-	let noteCollections = $state<Record<number, string[]>>({});
-
 	// Reactive sorted notes - automatically updates when notes change
 	let sortedNotes = $derived(() => {
 		return [...notes].sort((a, b) => 
@@ -212,7 +208,6 @@
 	async function loadNote(note: Note) {
 		try {
 			currentNote = await api.getNote(note.id);
-			console.log('Loading note:', note.title, 'Content length:', currentNote.content.length);
 			value = currentNote.content;
 			lastSavedContent = currentNote.content;
 			hasUnsavedChanges = false;
@@ -325,40 +320,16 @@
 	// Collections event handlers
 	function handleAddCollection(event: CustomEvent<{ noteId: number; collectionName: string }>) {
 		const { noteId, collectionName } = event.detail;
-		
-		// Add to all collections if it's new
-		if (!allCollections.includes(collectionName)) {
-			allCollections = [...allCollections, collectionName];
-		}
-		
-		// Add to note's collections
-		const currentNoteCollections = noteCollections[noteId] || [];
-		if (!currentNoteCollections.includes(collectionName)) {
-			noteCollections = {
-				...noteCollections,
-				[noteId]: [...currentNoteCollections, collectionName]
-			};
-		}
-		
 		toast.success(`Added to "${collectionName}" collection`);
 	}
 
 	function handleRemoveCollection(event: CustomEvent<{ noteId: number; collectionName: string }>) {
 		const { noteId, collectionName } = event.detail;
-		
-		// Remove from note's collections
-		const currentNoteCollections = noteCollections[noteId] || [];
-		noteCollections = {
-			...noteCollections,
-			[noteId]: currentNoteCollections.filter(c => c !== collectionName)
-		};
-		
 		toast.success(`Removed from "${collectionName}" collection`);
 	}
 
 	// Handle content changes from TiptapEditor
 	function handleContentChange(newValue: string) {
-		console.log('Content changed, new length:', newValue.length);
 		value = newValue;
 	}
 
@@ -369,11 +340,6 @@
 		} else {
 			hasUnsavedChanges = value.trim() !== '';
 		}
-	});
-
-	// Debug: Track value changes
-	$effect(() => {
-		console.log('Main page: Value changed, length:', value.length, 'Current note:', currentNote?.title);
 	});
 
 	// Reactive effect to load related notes when current note changes
@@ -495,8 +461,6 @@
 						{#if currentNote}
 							<Collections
 								currentNoteId={currentNote.id}
-								currentCollections={noteCollections[currentNote.id] || []}
-								allCollections={allCollections}
 								on:addCollection={handleAddCollection}
 								on:removeCollection={handleRemoveCollection}
 							/>

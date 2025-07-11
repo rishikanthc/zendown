@@ -37,6 +37,20 @@ export interface SemanticSearchResponse {
 	score: number;
 }
 
+export interface Collection {
+	id: number;
+	name: string;
+	created_at: string;
+}
+
+export interface AddCollectionRequest {
+	collection_name: string;
+}
+
+export interface RemoveCollectionRequest {
+	collection_name: string;
+}
+
 class API {
 	private baseURL = '/api';
 
@@ -174,6 +188,67 @@ class API {
 
 		if (!response.ok) {
 			throw new Error(`Failed to delete attachment: ${response.statusText}`);
+		}
+	}
+
+	// Collection methods
+	async getAllCollections(): Promise<Collection[]> {
+		const response = await fetch(`${this.baseURL}/collections`);
+
+		if (!response.ok) {
+			throw new Error(`Failed to get collections: ${response.statusText}`);
+		}
+
+		return response.json();
+	}
+
+	async getNoteCollections(noteId: number): Promise<Collection[]> {
+		const response = await fetch(`${this.baseURL}/notes/${noteId}/collections`);
+
+		if (!response.ok) {
+			throw new Error(`Failed to get note collections: ${response.statusText}`);
+		}
+
+		return response.json();
+	}
+
+	async getNotesByCollection(collectionId: number): Promise<Note[]> {
+		const response = await fetch(`${this.baseURL}/collections/${collectionId}/notes`);
+
+		if (!response.ok) {
+			throw new Error(`Failed to get notes by collection: ${response.statusText}`);
+		}
+
+		return response.json();
+	}
+
+	async addNoteToCollection(noteId: number, collectionName: string): Promise<Collection> {
+		const response = await fetch(`${this.baseURL}/notes/${noteId}/collections`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ collection_name: collectionName }),
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to add note to collection: ${response.statusText}`);
+		}
+
+		return response.json();
+	}
+
+	async removeNoteFromCollection(noteId: number, collectionName: string): Promise<void> {
+		const response = await fetch(`${this.baseURL}/notes/${noteId}/collections`, {
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ collection_name: collectionName }),
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to remove note from collection: ${response.statusText}`);
 		}
 	}
 }

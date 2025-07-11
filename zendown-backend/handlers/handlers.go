@@ -41,6 +41,14 @@ type UpdateNoteRequest struct {
 	Content string `json:"content"`
 }
 
+type AddCollectionRequest struct {
+	CollectionName string `json:"collection_name"`
+}
+
+type RemoveCollectionRequest struct {
+	CollectionName string `json:"collection_name"`
+}
+
 func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 	var req CreateNoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -527,6 +535,125 @@ func generateUniqueFilename(dir, filename string) string {
 	return newFilename
 }
 
+// Collection handlers
+func (h *Handler) GetAllCollections(w http.ResponseWriter, r *http.Request) {
+	collections, err := h.db.GetAllCollections()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(collections)
+}
+
+func (h *Handler) GetNoteCollections(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	noteID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid note ID", http.StatusBadRequest)
+		return
+	}
+
+	collections, err := h.db.GetNoteCollections(noteID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(collections)
+}
+
+func (h *Handler) GetNotesByCollection(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	collectionID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid collection ID", http.StatusBadRequest)
+		return
+	}
+
+	notes, err := h.db.GetNotesByCollection(collectionID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(notes)
+}
+
+func (h *Handler) AddNoteToCollection(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	noteID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid note ID", http.StatusBadRequest)
+		return
+	}
+
+	var req AddCollectionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.CollectionName == "" {
+		http.Error(w, "Collection name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get or create the collection
+	collection, err := h.db.GetOrCreateCollection(req.CollectionName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Add note to collection
+	if err := h.db.AddNoteToCollection(noteID, collection.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(collection)
+}
+
+func (h *Handler) RemoveNoteFromCollection(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	noteID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid note ID", http.StatusBadRequest)
+		return
+	}
+
+	var req RemoveCollectionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.CollectionName == "" {
+		http.Error(w, "Collection name is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get the collection
+	collection, err := h.db.GetCollectionByName(req.CollectionName)
+	if err != nil {
+		http.Error(w, "Collection not found", http.StatusNotFound)
+		return
+	}
+
+	// Remove note from collection
+	if err := h.db.RemoveNoteFromCollection(noteID, collection.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *Handler) SetupRoutes(router *mux.Router) {
 	// API routes
 	api := router.PathPrefix("/api").Subrouter()
@@ -544,4 +671,11 @@ func (h *Handler) SetupRoutes(router *mux.Router) {
 	api.HandleFunc("/attachments/all", h.GetAllAttachments).Methods("GET")
 	api.HandleFunc("/attachments/{id}", h.DeleteAttachment).Methods("DELETE")
 	api.HandleFunc("/attachments/{filename}", h.ServeAttachment).Methods("GET")
+
+	// Collection routes
+	api.HandleFunc("/collections", h.GetAllCollections).Methods("GET")
+	api.HandleFunc("/notes/{id}/collections", h.GetNoteCollections).Methods("GET")
+	api.HandleFunc("/collections/{id}/notes", h.GetNotesByCollection).Methods("GET")
+	api.HandleFunc("/notes/{id}/collections", h.AddNoteToCollection).Methods("POST")
+	api.HandleFunc("/notes/{id}/collections", h.RemoveNoteFromCollection).Methods("DELETE")
 }

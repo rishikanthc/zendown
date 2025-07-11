@@ -24,12 +24,6 @@ export function getWordCount(htmlContent: string): number {
 	// Split by whitespace and filter out empty strings
 	const words = textContent.trim().split(/\s+/).filter(word => word.length > 0);
 	
-	console.log('Word count calculation:', {
-		htmlLength: htmlContent.length,
-		textContent: textContent.substring(0, 100) + '...',
-		wordCount: words.length
-	});
-	
 	return words.length;
 }
 

@@ -3,35 +3,25 @@
 
 	interface Props {
 		content: string;
-		class?: string;
 	}
 
-	let { content = '', class: className = '' }: Props = $props();
+	let { content }: Props = $props();
 
-	// Calculate word count reactively
-	let wordCount = $derived(getWordCount(content));
-	
-	// Debug logging to see when content changes
+	let wordCount = $state(0);
+
 	$effect(() => {
-		console.log('WordCount: Content changed, new word count:', wordCount, 'Content length:', content.length);
-	});
-	
-	// Force reactivity by watching content changes
-	$effect(() => {
-		// This effect will run whenever content changes
-		const newWordCount = getWordCount(content);
-		console.log('WordCount effect triggered:', newWordCount);
+		if (content) {
+			const newWordCount = getWordCount(content);
+			wordCount = newWordCount;
+		} else {
+			wordCount = 0;
+		}
 	});
 </script>
 
-{#if wordCount > 0}
-	<div 
-		class="word-count {className}"
-		class:zen-mode={typeof window !== 'undefined' && document.documentElement.classList.contains('zen-mode')}
-	>
-		<span class="word-count-text">{wordCount} word{wordCount === 1 ? '' : 's'}</span>
-	</div>
-{/if}
+<div class="word-count">
+	{wordCount} words
+</div>
 
 <style>
 	.word-count {

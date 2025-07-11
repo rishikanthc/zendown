@@ -15,6 +15,17 @@ type Note struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type Collection struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type NoteCollection struct {
+	NoteID       int64 `json:"note_id"`
+	CollectionID int64 `json:"collection_id"`
+}
+
 type Attachment struct {
 	ID           int64     `json:"id"`
 	Filename     string    `json:"filename"`
@@ -57,6 +68,20 @@ func createTables(db *sql.DB) error {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
+	CREATE TABLE IF NOT EXISTS collections (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS note_collections (
+		note_id INTEGER NOT NULL,
+		collection_id INTEGER NOT NULL,
+		PRIMARY KEY (note_id, collection_id),
+		FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE,
+		FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE
+	);
+
 	CREATE TABLE IF NOT EXISTS attachments (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		filename TEXT NOT NULL,
@@ -67,10 +92,211 @@ func createTables(db *sql.DB) error {
 		url TEXT NOT NULL,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
+
+	-- Create indexes for efficient querying
+	CREATE INDEX IF NOT EXISTS idx_note_collections_note_id ON note_collections(note_id);
+	CREATE INDEX IF NOT EXISTS idx_note_collections_collection_id ON note_collections(collection_id);
+	CREATE INDEX IF NOT EXISTS idx_collections_name ON collections(name);
 	`
 
 	_, err := db.Exec(query)
 	return err
+}
+
+// Collection methods
+func (db *DB) CreateCollection(name string) (*Collection, error) {
+	query := `
+	INSERT INTO collections (name, created_at)
+	VALUES (?, CURRENT_TIMESTAMP)
+	`
+
+	result, err := db.Exec(query, name)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+
+	return db.GetCollection(id)
+}
+
+func (db *DB) GetCollection(id int64) (*Collection, error) {
+	query := `
+	SELECT id, name, created_at
+	FROM collections
+	WHERE id = ?
+	`
+
+	collection := &Collection{}
+	err := db.QueryRow(query, id).Scan(
+		&collection.ID,
+		&collection.Name,
+		&collection.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return collection, nil
+}
+
+func (db *DB) GetCollectionByName(name string) (*Collection, error) {
+	query := `
+	SELECT id, name, created_at
+	FROM collections
+	WHERE name = ?
+	`
+
+	collection := &Collection{}
+	err := db.QueryRow(query, name).Scan(
+		&collection.ID,
+		&collection.Name,
+		&collection.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return collection, nil
+}
+
+func (db *DB) GetAllCollections() ([]*Collection, error) {
+	query := `
+	SELECT id, name, created_at
+	FROM collections
+	ORDER BY name ASC
+	`
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var collections []*Collection
+	for rows.Next() {
+		collection := &Collection{}
+		err := rows.Scan(
+			&collection.ID,
+			&collection.Name,
+			&collection.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		collections = append(collections, collection)
+	}
+
+	return collections, nil
+}
+
+func (db *DB) DeleteCollection(id int64) error {
+	query := `DELETE FROM collections WHERE id = ?`
+	_, err := db.Exec(query, id)
+	return err
+}
+
+// Note-Collection relationship methods
+func (db *DB) AddNoteToCollection(noteID, collectionID int64) error {
+	query := `
+	INSERT OR IGNORE INTO note_collections (note_id, collection_id)
+	VALUES (?, ?)
+	`
+
+	_, err := db.Exec(query, noteID, collectionID)
+	return err
+}
+
+func (db *DB) RemoveNoteFromCollection(noteID, collectionID int64) error {
+	query := `
+	DELETE FROM note_collections
+	WHERE note_id = ? AND collection_id = ?
+	`
+
+	_, err := db.Exec(query, noteID, collectionID)
+	return err
+}
+
+func (db *DB) GetNoteCollections(noteID int64) ([]*Collection, error) {
+	query := `
+	SELECT c.id, c.name, c.created_at
+	FROM collections c
+	JOIN note_collections nc ON c.id = nc.collection_id
+	WHERE nc.note_id = ?
+	ORDER BY c.name ASC
+	`
+
+	rows, err := db.Query(query, noteID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var collections []*Collection
+	for rows.Next() {
+		collection := &Collection{}
+		err := rows.Scan(
+			&collection.ID,
+			&collection.Name,
+			&collection.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		collections = append(collections, collection)
+	}
+
+	return collections, nil
+}
+
+func (db *DB) GetNotesByCollection(collectionID int64) ([]*Note, error) {
+	query := `
+	SELECT n.id, n.title, n.content, n.created_at, n.updated_at
+	FROM notes n
+	JOIN note_collections nc ON n.id = nc.note_id
+	WHERE nc.collection_id = ?
+	ORDER BY n.updated_at DESC
+	`
+
+	rows, err := db.Query(query, collectionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var notes []*Note
+	for rows.Next() {
+		note := &Note{}
+		err := rows.Scan(
+			&note.ID,
+			&note.Title,
+			&note.Content,
+			&note.CreatedAt,
+			&note.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		notes = append(notes, note)
+	}
+
+	return notes, nil
+}
+
+func (db *DB) GetOrCreateCollection(name string) (*Collection, error) {
+	// Try to get existing collection
+	collection, err := db.GetCollectionByName(name)
+	if err == nil {
+		return collection, nil
+	}
+
+	// If not found, create new collection
+	return db.CreateCollection(name)
 }
 
 func (db *DB) CreateNote(title, content string) (*Note, error) {
