@@ -17,12 +17,10 @@ export const BlockEquationNode = Node.create({
 				default: '',
 				parseHTML: element => {
 					const content = element.getAttribute('data-content') || '';
-					console.log('🔍 BlockEquation: parseHTML - raw content from element:', JSON.stringify(content));
 					// Don't do any processing here - return the content as-is
 					return content;
 				},
 				renderHTML: attributes => {
-					console.log('🔍 BlockEquation: renderHTML in addAttributes - content:', JSON.stringify(attributes.content));
 					return {
 						'data-content': attributes.content,
 					};
@@ -38,7 +36,6 @@ export const BlockEquationNode = Node.create({
 				getAttrs: (element) => {
 					// Extract the content from the data-content attribute
 					const content = element.getAttribute('data-content');
-					console.log('🔍 BlockEquation: parseHTML - parsing element with content:', JSON.stringify(content));
 					return { content };
 				},
 			},
@@ -46,11 +43,8 @@ export const BlockEquationNode = Node.create({
 	},
 
 	renderHTML({ HTMLAttributes }) {
-		console.log('🔍 BlockEquation: renderHTML called with HTMLAttributes:', HTMLAttributes);
-		
 		// Try to get content from different possible attribute names
 		let content = HTMLAttributes.content || HTMLAttributes['data-content'] || '';
-		console.log('🔍 BlockEquation: Content from attributes:', content);
 		
 		// Clean up the content - remove quotes but preserve LaTeX line breaks
 		if (typeof content === 'string') {
@@ -64,8 +58,6 @@ export const BlockEquationNode = Node.create({
 			content = content.replace(/^["']|["']$/g, '');
 		}
 		
-		console.log('🔍 BlockEquation: Final content to render:', JSON.stringify(content));
-		
 		let renderedContent = '';
 		
 		try {
@@ -76,16 +68,11 @@ export const BlockEquationNode = Node.create({
 			// Final cleanup - remove any remaining quotes from the LaTeX content
 			latexContent = latexContent.replace(/^["']|["']$/g, '');
 			
-			console.log('🔍 BlockEquation: LaTeX content for KaTeX:', JSON.stringify(latexContent));
-			console.log('🔍 BlockEquation: KaTeX input (raw):', latexContent);
-			
 			renderedContent = katex.renderToString(latexContent, {
 				displayMode: true,
 				throwOnError: false,
+				strict: false,
 			});
-			console.log('🔍 BlockEquation: KaTeX output:', renderedContent);
-			console.log('🔍 BlockEquation: KaTeX rendered successfully');
-			console.log('🔍 BlockEquation: Final HTML structure being returned');
 		} catch (error) {
 			console.error('KaTeX rendering error:', error);
 			renderedContent = `<span class="katex-error">${content}</span>`;
@@ -107,7 +94,6 @@ export const BlockEquation = Extension.create({
 	name: 'blockEquationExtension',
 
 	addProseMirrorPlugins() {
-		console.log('🔍 BlockEquation: Extension loaded and ProseMirror plugins added');
 		
 		return [
 			// Decoration plugin to render KaTeX content
@@ -131,6 +117,7 @@ export const BlockEquation = Extension.create({
 										const renderedContent = katex.renderToString(latexContent, {
 											displayMode: true,
 											throwOnError: false,
+											strict: false,
 										});
 										
 										// Create decoration
@@ -156,26 +143,18 @@ export const BlockEquation = Extension.create({
 				key: new PluginKey('blockEquation'),
 				props: {
 					handleKeyDown: (view, event) => {
-						console.log('🔍 BlockEquation: handleKeyDown called with key:', event.key);
-						
 						// Check for Enter key to complete block equations
 						if (event.key === 'Enter') {
 							const { state } = view;
 							const { selection } = state;
 							const { $from } = selection;
 							
-							console.log('🔍 BlockEquation: Enter key pressed, checking for block equation');
-							console.log('🔍 BlockEquation: Current node type:', $from.parent.type.name);
-							
 							// Check if we're in a paragraph that might be part of a block equation
 							if ($from.parent.type.name === 'paragraph') {
 								const paragraphText = $from.parent.textContent || '';
-								console.log('🔍 BlockEquation: Paragraph text:', JSON.stringify(paragraphText));
 								
 								// Check if this paragraph contains a closing $$
 								if (paragraphText.trim() === '$$') {
-									console.log('🔍 BlockEquation: Found closing $$ in current paragraph');
-									
 									// Look for the opening $$ in previous paragraphs
 									let equationContent = '';
 									let startParagraphPos = -1;
@@ -190,13 +169,11 @@ export const BlockEquation = Extension.create({
 										
 										if (node.type.name === 'paragraph') {
 											const nodeText = node.textContent || '';
-											console.log('🔍 BlockEquation: Checking previous paragraph with text:', JSON.stringify(nodeText));
 											
 											if (nodeText.trim() === '$$') {
 												// Found opening $$
 												startParagraphPos = $pos.start();
 												foundOpening = true;
-												console.log('🔍 BlockEquation: Found opening $$ at position:', startParagraphPos);
 												break;
 											} else if (nodeText.trim()) {
 												// This is part of the equation content
@@ -206,8 +183,6 @@ export const BlockEquation = Extension.create({
 												} else {
 													equationContent = nodeText.trim();
 												}
-												console.log('🔍 BlockEquation: Added to equation content:', JSON.stringify(nodeText.trim()));
-												console.log('🔍 BlockEquation: Current equation content:', JSON.stringify(equationContent));
 											}
 										}
 										
@@ -215,25 +190,18 @@ export const BlockEquation = Extension.create({
 									}
 									
 									if (foundOpening && equationContent.trim()) {
-										console.log('🔍 BlockEquation: Found complete block equation with content:', JSON.stringify(equationContent));
-										
 										// We have a complete block equation
 										event.preventDefault();
 										
 										// Create the block equation node with the full equation including $$ delimiters
 										// Store the raw LaTeX content without any escaping
 										const fullEquation = `$$${equationContent.trim()}$$`;
-										console.log('🔍 BlockEquation: Creating block equation with content:', fullEquation);
-										console.log('🔍 BlockEquation: Raw equation content before storage:', equationContent.trim());
-										console.log('🔍 BlockEquation: Content being stored in node:', JSON.stringify(fullEquation));
 										const blockEquationNode = state.schema.nodes.blockEquationNode.create(
 											{ content: fullEquation }
 										);
 										
 										// Calculate the position to replace (from start of opening paragraph to end of current paragraph)
 										const endPos = $from.start() + $from.parent.nodeSize;
-										
-										console.log('🔍 BlockEquation: Replacing from', startParagraphPos, 'to', endPos);
 										
 										// Replace the block equation syntax with the node
 										const tr = state.tr.replaceWith(
@@ -243,24 +211,15 @@ export const BlockEquation = Extension.create({
 										);
 										
 										view.dispatch(tr);
-										console.log('🔍 BlockEquation: Block equation created successfully!');
 										return true;
-									} else {
-										console.log('🔍 BlockEquation: No opening $$ found or empty equation content');
 									}
-								} else {
-									console.log('🔍 BlockEquation: Current paragraph is not a closing $$');
 								}
-							} else {
-								console.log('🔍 BlockEquation: Not in a paragraph node');
 							}
 						}
 						return false;
 					}
 				},
 				appendTransaction: (transactions, oldState, newState) => {
-					console.log('🔍 BlockEquation: appendTransaction called');
-					
 					const tr = newState.tr;
 					let modified = false;
 					
@@ -279,19 +238,13 @@ export const BlockEquation = Extension.create({
 						}
 					});
 					
-					console.log('🔍 BlockEquation: Found', paragraphs.length, 'paragraphs');
-					
 					// Look for block equation patterns across consecutive paragraphs
 					for (let i = 0; i < paragraphs.length; i++) {
 						const currentParagraph = paragraphs[i];
 						const currentText = currentParagraph.text.trim();
 						
-						console.log('🔍 BlockEquation: Checking paragraph', i, 'with text:', JSON.stringify(currentText));
-						
 						// Check if this paragraph starts with $$
 						if (currentText === '$$') {
-							console.log('🔍 BlockEquation: Found opening $$ at paragraph', i);
-							
 							// Look for the closing $$ in subsequent paragraphs
 							let equationContent = '';
 							let endParagraphIndex = -1;
@@ -300,12 +253,9 @@ export const BlockEquation = Extension.create({
 								const nextParagraph = paragraphs[j];
 								const nextText = nextParagraph.text.trim();
 								
-								console.log('🔍 BlockEquation: Checking next paragraph', j, 'with text:', JSON.stringify(nextText));
-								
 								if (nextText === '$$') {
 									// Found closing $$
 									endParagraphIndex = j;
-									console.log('🔍 BlockEquation: Found closing $$ at paragraph', j);
 									break;
 								} else {
 									// This is part of the equation content
@@ -314,20 +264,13 @@ export const BlockEquation = Extension.create({
 										equationContent += '\n';
 									}
 									equationContent += nextText;
-									console.log('🔍 BlockEquation: Added to equation content (appendTransaction):', JSON.stringify(nextText));
-									console.log('🔍 BlockEquation: Current equation content (appendTransaction):', JSON.stringify(equationContent));
 								}
 							}
 							
 							if (endParagraphIndex !== -1 && equationContent.trim()) {
-								console.log('🔍 BlockEquation: Found complete block equation with content:', JSON.stringify(equationContent));
-								
 								// Create the block equation node with the full equation including $$ delimiters
 								// Store the raw LaTeX content without any escaping
 								const fullEquation = `$$${equationContent.trim()}$$`;
-								console.log('🔍 BlockEquation: Creating block equation with content:', fullEquation);
-								console.log('🔍 BlockEquation: Raw equation content before storage:', equationContent.trim());
-								console.log('🔍 BlockEquation: Content being stored in node (appendTransaction):', JSON.stringify(fullEquation));
 								const blockEquationNode = newState.schema.nodes.blockEquationNode.create(
 									{ content: fullEquation }
 								);
@@ -336,25 +279,14 @@ export const BlockEquation = Extension.create({
 								const startPos = currentParagraph.pos;
 								const endPos = paragraphs[endParagraphIndex].pos + paragraphs[endParagraphIndex].node.nodeSize;
 								
-								console.log('🔍 BlockEquation: Replacing from', startPos, 'to', endPos);
-								
 								// Replace the block equation syntax with the node
 								tr.replaceWith(startPos, endPos, blockEquationNode);
 								modified = true;
-								console.log('🔍 BlockEquation: Block equation created in appendTransaction');
 								
 								// Skip the paragraphs we just processed
 								i = endParagraphIndex;
-							} else {
-								console.log('🔍 BlockEquation: No closing $$ found or empty equation content');
 							}
 						}
-					}
-					
-					if (modified) {
-						console.log('🔍 BlockEquation: Returning modified transaction');
-					} else {
-						console.log('🔍 BlockEquation: No modifications made');
 					}
 					
 					return modified ? tr : null;
