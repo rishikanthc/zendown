@@ -1,9 +1,10 @@
 <script lang="ts">
 	import '$lib/tw.css';
-	import { api, type Note, type RelatedNoteResponse, type SemanticSearchResponse } from '$lib/api';
+	import { api, type Note, type RelatedNoteResponse, type SemanticSearchResponse, type Collection } from '$lib/api';
 	import { onMount, onDestroy } from 'svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
+	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
@@ -25,6 +26,14 @@
 
 	let hasUnsavedChanges = $state(false);
 	let lastSavedContent = $state('');
+
+	// Collections state
+	let collections: Collection[] = $state([]);
+	let isLoadingCollections = $state(false);
+	let collectionsError = $state('');
+
+	// Tab state
+	let activeTab = $state('notes');
 
 	// Related notes state
 	let relatedNotes: RelatedNoteResponse[] = $state([]);
@@ -53,12 +62,27 @@
 	onMount(() => {
 		sidebar = useSidebar();
 		loadNotes();
+		loadCollections();
 		document.addEventListener('keydown', handleKeydown);
 	});
 
 	onDestroy(() => {
 		document.removeEventListener('keydown', handleKeydown);
 	});
+
+	// Load collections
+	async function loadCollections() {
+		try {
+			isLoadingCollections = true;
+			collectionsError = '';
+			collections = await api.getAllCollections();
+		} catch (err) {
+			collectionsError = `Failed to load collections: ${err}`;
+			console.error('Error loading collections:', err);
+		} finally {
+			isLoadingCollections = false;
+		}
+	}
 
 	// Zen mode toggle function
 	function toggleZenMode() {
@@ -396,52 +420,99 @@
 				<Sidebar.Separator />
 				
 				<Sidebar.Group>
-					<Sidebar.GroupLabel>Notes</Sidebar.GroupLabel>
 					<Sidebar.GroupContent>
-						{#if isLoading}
-							<Sidebar.Menu>
-								{#each Array(3) as _}
-									<Sidebar.MenuItem>
-										<Sidebar.MenuSkeleton />
-									</Sidebar.MenuItem>
-								{/each}
-							</Sidebar.Menu>
-						{:else if notes.length === 0}
-							<div class="px-3 py-8 text-center">
-								<div class="text-muted-foreground text-sm">
-									<p class="mb-2">No notes yet</p>
-									<p class="text-xs">Create your first note to get started</p>
-								</div>
-							</div>
-						{:else}
-							<Sidebar.Menu>
-								{#each sortedNotes() as note}
-									<ContextMenu.Root>
-										<ContextMenu.Trigger>
+						<Tabs.Root bind:value={activeTab} class="w-full">
+							<Tabs.List class="grid w-full grid-cols-2 mb-2">
+								<Tabs.Trigger value="notes">Notes</Tabs.Trigger>
+								<Tabs.Trigger value="collections">Collections</Tabs.Trigger>
+							</Tabs.List>
+							
+							<Tabs.Content value="notes">
+								{#if isLoading}
+									<Sidebar.Menu>
+										{#each Array(3) as _}
 											<Sidebar.MenuItem>
-												<Sidebar.MenuButton 
-													isActive={currentNote?.id === note.id}
-													onclick={() => loadNote(note)}
-												>
+												<Sidebar.MenuSkeleton />
+											</Sidebar.MenuItem>
+										{/each}
+									</Sidebar.Menu>
+								{:else if notes.length === 0}
+									<div class="px-3 py-8 text-center">
+										<div class="text-muted-foreground text-sm">
+											<p class="mb-2">No notes yet</p>
+											<p class="text-xs">Create your first note to get started</p>
+										</div>
+									</div>
+								{:else}
+									<Sidebar.Menu>
+										{#each sortedNotes() as note}
+											<ContextMenu.Root>
+												<ContextMenu.Trigger>
+													<Sidebar.MenuItem>
+														<Sidebar.MenuButton 
+															isActive={currentNote?.id === note.id}
+															onclick={() => loadNote(note)}
+														>
+															<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+															</svg>
+															<span>{note.title}</span>
+														</Sidebar.MenuButton>
+													</Sidebar.MenuItem>
+												</ContextMenu.Trigger>
+												<ContextMenu.Content>
+													<ContextMenu.Item onSelect={() => deleteNoteById(note.id)}>
+														<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+														</svg>
+														Delete
+													</ContextMenu.Item>
+												</ContextMenu.Content>
+											</ContextMenu.Root>
+										{/each}
+									</Sidebar.Menu>
+								{/if}
+							</Tabs.Content>
+							
+							<Tabs.Content value="collections">
+								{#if isLoadingCollections}
+									<Sidebar.Menu>
+										{#each Array(3) as _}
+											<Sidebar.MenuItem>
+												<Sidebar.MenuSkeleton />
+											</Sidebar.MenuItem>
+										{/each}
+									</Sidebar.Menu>
+								{:else if collectionsError}
+									<div class="px-3 py-8 text-center">
+										<div class="text-muted-foreground text-sm">
+											<p class="mb-2">Failed to load collections</p>
+											<p class="text-xs">{collectionsError}</p>
+										</div>
+									</div>
+								{:else if collections.length === 0}
+									<div class="px-3 py-8 text-center">
+										<div class="text-muted-foreground text-sm">
+											<p class="mb-2">No collections yet</p>
+											<p class="text-xs">Create collections to organize your notes</p>
+										</div>
+									</div>
+								{:else}
+									<Sidebar.Menu>
+										{#each collections as collection}
+											<Sidebar.MenuItem>
+												<Sidebar.MenuButton>
 													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
 													</svg>
-													<span>{note.title}</span>
+													<span>{collection.name}</span>
 												</Sidebar.MenuButton>
 											</Sidebar.MenuItem>
-										</ContextMenu.Trigger>
-										<ContextMenu.Content>
-											<ContextMenu.Item onSelect={() => deleteNoteById(note.id)}>
-												<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-												</svg>
-												Delete
-											</ContextMenu.Item>
-										</ContextMenu.Content>
-									</ContextMenu.Root>
-								{/each}
-							</Sidebar.Menu>
-						{/if}
+										{/each}
+									</Sidebar.Menu>
+								{/if}
+							</Tabs.Content>
+						</Tabs.Root>
 					</Sidebar.GroupContent>
 				</Sidebar.Group>
 			</Sidebar.Content>

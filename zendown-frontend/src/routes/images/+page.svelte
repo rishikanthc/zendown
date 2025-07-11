@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api, type Attachment } from '$lib/api';
+	import { api, type Attachment, type Collection } from '$lib/api';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
@@ -12,6 +13,15 @@
 	let attachments: Attachment[] = $state([]);
 	let isLoading = $state(false);
 	let error = $state('');
+
+	// Collections state
+	let collections: Collection[] = $state([]);
+	let isLoadingCollections = $state(false);
+	let collectionsError = $state('');
+
+	// Tab state
+	let activeTab = $state('notes');
+
 	let selectedImage: Attachment | null = $state(null);
 	let isImageModalOpen = $state(false);
 	let deletingAttachmentId: number | null = $state(null);
@@ -25,6 +35,20 @@
 			error = `Failed to load images: ${err}`;
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	// Load collections
+	async function loadCollections() {
+		try {
+			isLoadingCollections = true;
+			collectionsError = '';
+			collections = await api.getAllCollections();
+		} catch (err) {
+			collectionsError = `Failed to load collections: ${err}`;
+			console.error('Error loading collections:', err);
+		} finally {
+			isLoadingCollections = false;
 		}
 	}
 
@@ -100,6 +124,7 @@
 
 	onMount(() => {
 		loadAttachments();
+		loadCollections();
 	});
 </script>
 
@@ -117,30 +142,78 @@
 		
 		<Sidebar.Content>
 			<Sidebar.Group>
-				<Sidebar.GroupContent>
-					<Sidebar.Menu>
-						<Sidebar.MenuItem>
-							<a href="/" class="w-full">
-								<Sidebar.MenuButton>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-									</svg>
-									<span>Notes</span>
-								</Sidebar.MenuButton>
-							</a>
-						</Sidebar.MenuItem>
-						<Sidebar.MenuItem>
-							<a href="/images" class="w-full">
-								<Sidebar.MenuButton isActive={true}>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-									</svg>
-									<span>Images</span>
-								</Sidebar.MenuButton>
-							</a>
-						</Sidebar.MenuItem>
-					</Sidebar.Menu>
-				</Sidebar.GroupContent>
+							<Sidebar.GroupContent>
+				<Tabs.Root bind:value={activeTab} class="w-full">
+					<Tabs.List class="grid w-full grid-cols-2 mb-2">
+						<Tabs.Trigger value="notes">Notes</Tabs.Trigger>
+						<Tabs.Trigger value="collections">Collections</Tabs.Trigger>
+					</Tabs.List>
+					
+					<Tabs.Content value="notes">
+						<Sidebar.Menu>
+							<Sidebar.MenuItem>
+								<a href="/" class="w-full">
+									<Sidebar.MenuButton>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+										</svg>
+										<span>Notes</span>
+									</Sidebar.MenuButton>
+								</a>
+							</Sidebar.MenuItem>
+							<Sidebar.MenuItem>
+								<a href="/images" class="w-full">
+									<Sidebar.MenuButton isActive={true}>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+										</svg>
+										<span>Images</span>
+									</Sidebar.MenuButton>
+								</a>
+							</Sidebar.MenuItem>
+						</Sidebar.Menu>
+					</Tabs.Content>
+					
+					<Tabs.Content value="collections">
+						{#if isLoadingCollections}
+							<Sidebar.Menu>
+								{#each Array(3) as _}
+									<Sidebar.MenuItem>
+										<Sidebar.MenuSkeleton />
+									</Sidebar.MenuItem>
+								{/each}
+							</Sidebar.Menu>
+						{:else if collectionsError}
+							<div class="px-3 py-8 text-center">
+								<div class="text-muted-foreground text-sm">
+									<p class="mb-2">Failed to load collections</p>
+									<p class="text-xs">{collectionsError}</p>
+								</div>
+							</div>
+						{:else if collections.length === 0}
+							<div class="px-3 py-8 text-center">
+								<div class="text-muted-foreground text-sm">
+									<p class="mb-2">No collections yet</p>
+									<p class="text-xs">Create collections to organize your notes</p>
+								</div>
+							</div>
+						{:else}
+							<Sidebar.Menu>
+								{#each collections as collection}
+									<Sidebar.MenuItem>
+										<Sidebar.MenuButton>
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+											</svg>
+											<span>{collection.name}</span>
+										</Sidebar.MenuButton>
+									</Sidebar.MenuItem>
+								{/each}
+							</Sidebar.Menu>
+						{/if}
+					</Tabs.Content>
+				</Tabs.Root>
+			</Sidebar.GroupContent>
 			</Sidebar.Group>
 		</Sidebar.Content>
 	</Sidebar.Root>
