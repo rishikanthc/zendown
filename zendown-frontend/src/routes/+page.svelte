@@ -10,6 +10,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import TiptapEditor from '$lib/TiptapEditor.svelte';
+	import WordCount from '$lib/components/WordCount.svelte';
 
 	import { toast } from 'svelte-sonner';
 	import { useSidebar } from '$lib/components/ui/sidebar/context.svelte.js';
@@ -206,6 +207,7 @@
 	async function loadNote(note: Note) {
 		try {
 			currentNote = await api.getNote(note.id);
+			console.log('Loading note:', note.title, 'Content length:', currentNote.content.length);
 			value = currentNote.content;
 			lastSavedContent = currentNote.content;
 			hasUnsavedChanges = false;
@@ -317,6 +319,7 @@
 
 	// Handle content changes from TiptapEditor
 	function handleContentChange(newValue: string) {
+		console.log('Content changed, new length:', newValue.length);
 		value = newValue;
 	}
 
@@ -327,6 +330,11 @@
 		} else {
 			hasUnsavedChanges = value.trim() !== '';
 		}
+	});
+
+	// Debug: Track value changes
+	$effect(() => {
+		console.log('Main page: Value changed, length:', value.length, 'Current note:', currentNote?.title);
 	});
 
 	// Reactive effect to load related notes when current note changes
@@ -644,6 +652,9 @@
 {#if hasUnsavedChanges}
 	<div class="fixed top-4 right-4 z-50 w-3 h-3 bg-orange-500 rounded-full animate-pulse shadow-lg"></div>
 {/if}
+
+<!-- Word Count -->
+<WordCount content={value} />
 
 
 
