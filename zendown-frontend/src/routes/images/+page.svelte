@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api, type Attachment, type Collection, type Note } from '$lib/api';
+	import { api, type Attachment } from '$lib/api';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
@@ -14,18 +13,7 @@
 	let isLoading = $state(false);
 	let error = $state('');
 
-	// Collections state
-	let collections: Collection[] = $state([]);
-	let isLoadingCollections = $state(false);
-	let collectionsError = $state('');
 
-	// Collection notes state
-	let collectionNotes: Record<number, Note[]> = $state({});
-	let isLoadingCollectionNotes: Record<number, boolean> = $state({});
-	let expandedCollections: number[] = $state([]);
-
-	// Tab state
-	let activeTab = $state('notes');
 
 	let selectedImage: Attachment | null = $state(null);
 	let isImageModalOpen = $state(false);
@@ -43,53 +31,7 @@
 		}
 	}
 
-	// Load collections
-	async function loadCollections() {
-		try {
-			isLoadingCollections = true;
-			collectionsError = '';
-			collections = await api.getAllCollections();
-		} catch (err) {
-			collectionsError = `Failed to load collections: ${err}`;
-			console.error('Error loading collections:', err);
-		} finally {
-			isLoadingCollections = false;
-		}
-	}
 
-	// Load notes for a specific collection
-	async function loadCollectionNotes(collectionId: number, forceReload = false) {
-		if (collectionNotes[collectionId] && !forceReload) return; // Already loaded
-		
-		try {
-			isLoadingCollectionNotes[collectionId] = true;
-			const notes = await api.getNotesByCollection(collectionId);
-			collectionNotes[collectionId] = notes || [];
-		} catch (err) {
-			console.error(`Failed to load notes for collection ${collectionId}:`, err);
-			collectionNotes[collectionId] = [];
-		} finally {
-			isLoadingCollectionNotes[collectionId] = false;
-		}
-	}
-
-	// Refresh collection notes for a specific collection
-	async function refreshCollectionNotes(collectionId: number) {
-		await loadCollectionNotes(collectionId, true);
-	}
-
-	// Toggle collection expansion
-	async function toggleCollection(collectionId: number) {
-		if (expandedCollections.includes(collectionId)) {
-			// Collapse
-			expandedCollections = expandedCollections.filter(id => id !== collectionId);
-		} else {
-			// Expand
-			expandedCollections = [...expandedCollections, collectionId];
-			// Load notes if not already loaded
-			await loadCollectionNotes(collectionId);
-		}
-	}
 
 	// Delete attachment
 	async function deleteAttachment(attachment: Attachment, event: Event) {
@@ -163,14 +105,6 @@
 
 	onMount(() => {
 		loadAttachments();
-		loadCollections();
-	});
-
-	// Reactive effect to reload collections when tab changes to collections
-	$effect(() => {
-		if (activeTab === 'collections') {
-			loadCollections();
-		}
 	});
 </script>
 
@@ -189,121 +123,28 @@
 		<Sidebar.Content>
 			<Sidebar.Group>
 							<Sidebar.GroupContent>
-				<Tabs.Root bind:value={activeTab} class="w-full">
-					<Tabs.List class="flex gap-1 mb-2">
-						<Tabs.Trigger value="notes" class="w-9 h-9 p-0 flex items-center justify-center">
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-							</svg>
-						</Tabs.Trigger>
-						<Tabs.Trigger value="collections" class="w-9 h-9 p-0 flex items-center justify-center">
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-							</svg>
-						</Tabs.Trigger>
-					</Tabs.List>
-					
-					<Tabs.Content value="notes">
-						<Sidebar.Menu>
-							<Sidebar.MenuItem>
-								<a href="/" class="w-full">
-									<Sidebar.MenuButton>
-										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-										</svg>
-										<span>Notes</span>
-									</Sidebar.MenuButton>
-								</a>
-							</Sidebar.MenuItem>
-							<Sidebar.MenuItem>
-								<a href="/images" class="w-full">
-									<Sidebar.MenuButton isActive={true}>
-										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-										</svg>
-										<span>Images</span>
-									</Sidebar.MenuButton>
-								</a>
-							</Sidebar.MenuItem>
-						</Sidebar.Menu>
-					</Tabs.Content>
-					
-					<Tabs.Content value="collections">
-						{#if isLoadingCollections}
-							<Sidebar.Menu>
-								{#each Array(3) as _}
-									<Sidebar.MenuItem>
-										<Sidebar.MenuSkeleton />
-									</Sidebar.MenuItem>
-								{/each}
-							</Sidebar.Menu>
-						{:else if collectionsError}
-							<div class="px-3 py-8 text-center">
-								<div class="text-muted-foreground text-sm">
-									<p class="mb-2">Failed to load collections</p>
-									<p class="text-xs">{collectionsError}</p>
-								</div>
-							</div>
-						{:else if collections.length === 0}
-							<div class="px-3 py-8 text-center">
-								<div class="text-muted-foreground text-sm">
-									<p class="mb-2">No collections yet</p>
-									<p class="text-xs">Create collections to organize your notes</p>
-								</div>
-							</div>
-						{:else}
-							<Sidebar.Menu>
-								{#each collections as collection}
-									<Sidebar.MenuItem>
-										<Sidebar.MenuButton 
-											isActive={expandedCollections.includes(collection.id)}
-											onclick={() => toggleCollection(collection.id)}
-										>
-											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-											</svg>
-											<span>{collection.name}</span>
-										</Sidebar.MenuButton>
-									</Sidebar.MenuItem>
-									
-									<!-- Collection notes (shown when expanded) -->
-									{#if expandedCollections.includes(collection.id)}
-										{#if isLoadingCollectionNotes[collection.id]}
-											<Sidebar.MenuItem>
-												<div class="pl-6">
-													<Sidebar.MenuSkeleton />
-												</div>
-											</Sidebar.MenuItem>
-										{:else if collectionNotes[collection.id] && collectionNotes[collection.id].length > 0}
-											{#each collectionNotes[collection.id] as note}
-												<Sidebar.MenuItem>
-													<div class="pl-6">
-														<a href="/" class="w-full">
-															<Sidebar.MenuButton>
-																<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-																</svg>
-																<span>{note.title}</span>
-															</Sidebar.MenuButton>
-														</a>
-													</div>
-												</Sidebar.MenuItem>
-											{/each}
-										{:else}
-											<Sidebar.MenuItem>
-												<div class="pl-6 px-3 py-2">
-													<div class="text-muted-foreground text-xs">
-														No notes in this collection
-													</div>
-												</div>
-											</Sidebar.MenuItem>
-										{/if}
-									{/if}
-								{/each}
-							</Sidebar.Menu>
-						{/if}
-					</Tabs.Content>
-				</Tabs.Root>
+				<Sidebar.Menu>
+					<Sidebar.MenuItem>
+						<a href="/" class="w-full">
+							<Sidebar.MenuButton>
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+								</svg>
+								<span>Notes</span>
+							</Sidebar.MenuButton>
+						</a>
+					</Sidebar.MenuItem>
+					<Sidebar.MenuItem>
+						<a href="/images" class="w-full">
+							<Sidebar.MenuButton isActive={true}>
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+								</svg>
+								<span>Images</span>
+							</Sidebar.MenuButton>
+						</a>
+					</Sidebar.MenuItem>
+				</Sidebar.Menu>
 			</Sidebar.GroupContent>
 			</Sidebar.Group>
 		</Sidebar.Content>
