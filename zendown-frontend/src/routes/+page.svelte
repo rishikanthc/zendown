@@ -32,6 +32,11 @@
 	let isLoadingCollections = $state(false);
 	let collectionsError = $state('');
 
+	// Collection notes state
+	let collectionNotes: Record<number, Note[]> = $state({});
+	let isLoadingCollectionNotes: Record<number, boolean> = $state({});
+	let expandedCollections: number[] = $state([]);
+
 	// Tab state
 	let activeTab = $state('notes');
 
@@ -82,6 +87,48 @@
 		} finally {
 			isLoadingCollections = false;
 		}
+	}
+
+	// Load notes for a specific collection
+	async function loadCollectionNotes(collectionId: number) {
+		console.log('Loading notes for collection:', collectionId);
+		if (collectionNotes[collectionId]) {
+			console.log('Notes already loaded for collection:', collectionId);
+			return; // Already loaded
+		}
+		
+		try {
+			isLoadingCollectionNotes[collectionId] = true;
+			console.log('Fetching notes from API for collection:', collectionId);
+			const notes = await api.getNotesByCollection(collectionId);
+			console.log('Received notes:', notes);
+			collectionNotes[collectionId] = notes || [];
+		} catch (err) {
+			console.error(`Failed to load notes for collection ${collectionId}:`, err);
+			collectionNotes[collectionId] = [];
+		} finally {
+			isLoadingCollectionNotes[collectionId] = false;
+		}
+	}
+
+	// Toggle collection expansion
+	async function toggleCollection(collectionId: number) {
+		console.log('Toggle collection called with ID:', collectionId);
+		console.log('Current expanded collections:', expandedCollections);
+		
+		if (expandedCollections.includes(collectionId)) {
+			// Collapse
+			console.log('Collapsing collection:', collectionId);
+			expandedCollections = expandedCollections.filter(id => id !== collectionId);
+		} else {
+			// Expand
+			console.log('Expanding collection:', collectionId);
+			expandedCollections = [...expandedCollections, collectionId];
+			// Load notes if not already loaded
+			await loadCollectionNotes(collectionId);
+		}
+		
+		console.log('Updated expanded collections:', expandedCollections);
 	}
 
 	// Zen mode toggle function
@@ -509,13 +556,51 @@
 									<Sidebar.Menu>
 										{#each collections as collection}
 											<Sidebar.MenuItem>
-												<Sidebar.MenuButton>
+												<Sidebar.MenuButton 
+													isActive={expandedCollections.includes(collection.id)}
+													onclick={() => toggleCollection(collection.id)}
+												>
 													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
 													</svg>
 													<span>{collection.name}</span>
 												</Sidebar.MenuButton>
 											</Sidebar.MenuItem>
+											
+											<!-- Collection notes (shown when expanded) -->
+											{#if expandedCollections.includes(collection.id)}
+												{#if isLoadingCollectionNotes[collection.id]}
+													<Sidebar.MenuItem>
+														<div class="pl-6">
+															<Sidebar.MenuSkeleton />
+														</div>
+													</Sidebar.MenuItem>
+												{:else if collectionNotes[collection.id] && collectionNotes[collection.id].length > 0}
+													{#each collectionNotes[collection.id] as note}
+														<Sidebar.MenuItem>
+															<div class="pl-6">
+																<Sidebar.MenuButton 
+																	isActive={currentNote?.id === note.id}
+																	onclick={() => loadNote(note)}
+																>
+																	<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+																	</svg>
+																	<span>{note.title}</span>
+																</Sidebar.MenuButton>
+															</div>
+														</Sidebar.MenuItem>
+													{/each}
+												{:else}
+													<Sidebar.MenuItem>
+														<div class="pl-6 px-3 py-2">
+															<div class="text-muted-foreground text-xs">
+																No notes in this collection
+															</div>
+														</div>
+													</Sidebar.MenuItem>
+												{/if}
+											{/if}
 										{/each}
 									</Sidebar.Menu>
 								{/if}
