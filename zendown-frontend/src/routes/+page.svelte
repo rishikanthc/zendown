@@ -91,17 +91,13 @@
 
 	// Load notes for a specific collection
 	async function loadCollectionNotes(collectionId: number, forceReload = false) {
-		console.log('Loading notes for collection:', collectionId, 'forceReload:', forceReload);
 		if (collectionNotes[collectionId] && !forceReload) {
-			console.log('Notes already loaded for collection:', collectionId);
 			return; // Already loaded
 		}
 		
 		try {
 			isLoadingCollectionNotes[collectionId] = true;
-			console.log('Fetching notes from API for collection:', collectionId);
 			const notes = await api.getNotesByCollection(collectionId);
-			console.log('Received notes:', notes);
 			collectionNotes[collectionId] = notes || [];
 		} catch (err) {
 			console.error(`Failed to load notes for collection ${collectionId}:`, err);
@@ -126,22 +122,15 @@
 
 	// Toggle collection expansion
 	async function toggleCollection(collectionId: number) {
-		console.log('Toggle collection called with ID:', collectionId);
-		console.log('Current expanded collections:', expandedCollections);
-		
 		if (expandedCollections.includes(collectionId)) {
 			// Collapse
-			console.log('Collapsing collection:', collectionId);
 			expandedCollections = expandedCollections.filter(id => id !== collectionId);
 		} else {
 			// Expand
-			console.log('Expanding collection:', collectionId);
 			expandedCollections = [...expandedCollections, collectionId];
 			// Load notes if not already loaded
 			await loadCollectionNotes(collectionId);
 		}
-		
-		console.log('Updated expanded collections:', expandedCollections);
 	}
 
 	// Zen mode toggle function
