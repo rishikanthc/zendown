@@ -252,17 +252,18 @@
 <style>
 	.editor-container {
 		display: flex;
-		flex-direction: row;
+		flex-direction: column;
 		min-height: 0;
-		gap: 6rem;
+		gap: 1rem;
 		align-items: flex-start;
 	}
 
 	.editor-main {
-		flex: 0 0 800px;
+		flex: 1;
 		display: flex;
 		flex-direction: column;
 		position: relative;
+		width: 100%;
 	}
 
 	.toolbar-wrapper {
@@ -273,22 +274,27 @@
 		backdrop-filter: blur(8px);
 		margin: 0 -1rem;
 		padding: 0 1rem;
+		overflow-x: auto;
+		overflow-y: hidden;
 	}
 
 	.editor-sidebar {
-		flex: 0 0 200px;
-		position: sticky;
-		top: 1rem;
-		max-height: calc(100vh - 2rem);
+		flex: 0 0 auto;
+		position: relative;
+		width: 100%;
+		max-height: 200px;
 		overflow-y: auto;
-		padding: 0;
+		padding: 1rem;
+		border-top: 1px solid #e5e7eb;
+		order: -1;
+		background-color: #f9fafb;
 	}
 
 	.sidebar-content {
 		display: flex;
 		flex-direction: column;
 		height: 100%;
-		gap: 0.75rem;
+		gap: 0.5rem;
 	}
 
 	.sidebar-title {
@@ -310,6 +316,7 @@
 		text-decoration: none;
 		flex: 1;
 		font-family: 'Noto Sans', sans-serif;
+		max-height: 150px;
 	}
 
 	/* Zen mode styles */
@@ -318,7 +325,7 @@
 		justify-content: center;
 		align-items: center;
 		height: 100vh;
-		padding: 2rem;
+		padding: 1rem;
 	}
 
 	.editor-container.zen-mode .editor-main {
@@ -338,48 +345,45 @@
 		padding: 0;
 	}
 
+	.editor-container.zen-mode .editor-sidebar {
+		display: none;
+	}
+
 	/* Responsive design */
-	@media (max-width: 1024px) {
+	@media (min-width: 1024px) {
 		.editor-container {
-			flex-direction: column-reverse;
-			gap: 1rem;
+			flex-direction: row;
+			gap: 6rem;
+			align-items: flex-start;
 		}
 
 		.editor-main {
-			flex: 1;
-			min-width: 0;
-		}
-
-		.toolbar-wrapper {
-			position: sticky;
-			top: 0;
-			z-index: 10;
-			background: rgba(255, 255, 255, 0.95);
-			backdrop-filter: blur(8px);
-			margin: 0;
-			padding: 0 1rem;
+			flex: 0 0 800px;
 		}
 
 		.editor-sidebar {
-			flex: 1;
-			position: unset;
-			height: auto;
-			max-height: 200px;
-			border-top: 1px solid #e5e7eb;
-			padding: 1rem;
+			flex: 0 0 200px;
+			position: sticky;
+			top: 1rem;
+			max-height: calc(100vh - 2rem);
+			overflow-y: auto;
+			padding: 0;
+			border-top: none;
+			order: 0;
+			background-color: #f9fafb;
 		}
 
 		.sidebar-content {
-			gap: 0.5rem;
+			gap: 0.75rem;
 		}
 
 		.table-of-contents {
-			max-height: 150px;
+			max-height: none;
 		}
 
 		/* Zen mode responsive */
 		.editor-container.zen-mode {
-			padding: 1rem;
+			padding: 2rem;
 		}
 	}
 
@@ -387,7 +391,13 @@
 		flex: 1;
 		overflow-y: auto;
 		min-height: 0;
-		padding: 1rem;
+		padding: 0.75rem;
+	}
+
+	@media (min-width: 640px) {
+		.tiptap-editor {
+			padding: 1rem;
+		}
 	}
 
 	.tiptap-editor.readonly {
@@ -408,17 +418,25 @@
 
 	/* Paragraphs */
 	:global(.ProseMirror p) {
-		margin: 0.75rem 0;
-		font-size: 1rem;
-		line-height: 1.7;
+		margin: 0.5rem 0;
+		font-size: 0.9375rem;
+		line-height: 1.6;
+	}
+
+	@media (min-width: 640px) {
+		:global(.ProseMirror p) {
+			margin: 0.75rem 0;
+			font-size: 1rem;
+			line-height: 1.7;
+		}
 	}
 
 	/* Headings with Space Grotesk */
 	:global(.ProseMirror h1) {
 		font-family: 'Space Grotesk', sans-serif;
-		font-size: 2.25rem;
+		font-size: 1.875rem;
 		font-weight: 600;
-		margin: 2rem 0 1rem 0;
+		margin: 1.5rem 0 0.75rem 0;
 		color: #111827;
 		line-height: 1.2;
 		letter-spacing: -0.025em;
@@ -426,9 +444,9 @@
 
 	:global(.ProseMirror h2) {
 		font-family: 'Space Grotesk', sans-serif;
-		font-size: 1.875rem;
+		font-size: 1.5rem;
 		font-weight: 600;
-		margin: 1.75rem 0 0.75rem 0;
+		margin: 1.25rem 0 0.5rem 0;
 		color: #111827;
 		line-height: 1.3;
 		letter-spacing: -0.025em;
@@ -436,9 +454,9 @@
 
 	:global(.ProseMirror h3) {
 		font-family: 'Space Grotesk', sans-serif;
-		font-size: 1.5rem;
+		font-size: 1.25rem;
 		font-weight: 600;
-		margin: 1.5rem 0 0.5rem 0;
+		margin: 1rem 0 0.5rem 0;
 		color: #111827;
 		line-height: 1.4;
 		letter-spacing: -0.025em;
@@ -446,12 +464,34 @@
 
 	:global(.ProseMirror h4) {
 		font-family: 'Space Grotesk', sans-serif;
-		font-size: 1.25rem;
+		font-size: 1.125rem;
 		font-weight: 600;
-		margin: 1.25rem 0 0.5rem 0;
+		margin: 0.875rem 0 0.5rem 0;
 		color: #111827;
 		line-height: 1.4;
 		letter-spacing: -0.025em;
+	}
+
+	@media (min-width: 640px) {
+		:global(.ProseMirror h1) {
+			font-size: 2.25rem;
+			margin: 2rem 0 1rem 0;
+		}
+
+		:global(.ProseMirror h2) {
+			font-size: 1.875rem;
+			margin: 1.75rem 0 0.75rem 0;
+		}
+
+		:global(.ProseMirror h3) {
+			font-size: 1.5rem;
+			margin: 1.5rem 0 0.5rem 0;
+		}
+
+		:global(.ProseMirror h4) {
+			font-size: 1.25rem;
+			margin: 1.25rem 0 0.5rem 0;
+		}
 	}
 
 	:global(.ProseMirror h5) {
@@ -1088,10 +1128,17 @@
 		border-right: 1px solid #e5e7eb;
 		box-sizing: border-box;
 		min-width: 1em;
-		padding: 0.75rem 1rem;
+		padding: 0.5rem 0.75rem;
 		position: relative;
 		vertical-align: top;
 		line-height: 1.5;
+	}
+
+	@media (min-width: 640px) {
+		:global(.ProseMirror table td),
+		:global(.ProseMirror table th) {
+			padding: 0.75rem 1rem;
+		}
 	}
 
 	:global(.ProseMirror table th) {

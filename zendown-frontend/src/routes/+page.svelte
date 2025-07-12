@@ -640,24 +640,35 @@
 	<main class="flex-1 flex flex-col" class:zen-mode={isZenMode}>
 		<!-- Header -->
 		{#if !isZenMode}
-			<header class="px-6 py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+			<header class="px-4 sm:px-6 py-3 sm:py-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
 				<div class="flex items-center justify-between">
-					<div class="flex items-center gap-4">
+					<div class="flex items-center gap-2 sm:gap-4">
 						<Sidebar.Trigger />
-					</div>
-					<div class="flex items-center gap-2">
+						<!-- Mobile: Show current note title if available -->
 						{#if currentNote}
-							<Collections
-								currentNoteId={currentNote.id}
-								on:addCollection={handleAddCollection}
-								on:removeCollection={handleRemoveCollection}
-							/>
+							<div class="sm:hidden flex-1 min-w-0">
+								<h1 class="text-sm font-medium text-foreground truncate" title={currentNote.title}>
+									{currentNote.title}
+								</h1>
+							</div>
+						{/if}
+					</div>
+					<div class="flex items-center gap-1 sm:gap-2">
+						{#if currentNote}
+							<!-- Hide collections on mobile, show in sidebar instead -->
+							<div class="hidden sm:block">
+								<Collections
+									currentNoteId={currentNote.id}
+									on:addCollection={handleAddCollection}
+									on:removeCollection={handleRemoveCollection}
+								/>
+							</div>
 						{/if}
 						<Button 
 							variant="ghost" 
 							size="icon" 
 							onclick={openSearch}
-							class="h-9 w-9"
+							class="h-8 w-8 sm:h-9 sm:w-9"
 						>
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -670,14 +681,14 @@
 
 		<!-- Error banner -->
 		{#if error}
-			<div class="bg-destructive/10 border-b border-destructive/20 px-6 py-3">
+			<div class="bg-destructive/10 border-b border-destructive/20 px-4 sm:px-6 py-3">
 				<div class="flex items-center justify-between">
-					<p class="text-sm text-destructive">{error}</p>
+					<p class="text-sm text-destructive pr-2">{error}</p>
 					<Button 
 						variant="ghost" 
 						size="sm" 
 						onclick={() => error = ''}
-						class="text-destructive hover:text-destructive"
+						class="text-destructive hover:text-destructive flex-shrink-0"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -688,7 +699,7 @@
 		{/if}
 
 		<!-- Editor -->
-		<div class="w-[800px] mx-auto" class:zen-editor={isZenMode}>
+		<div class="w-full max-w-none sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 sm:px-6" class:zen-editor={isZenMode}>
 			<TiptapEditor 
 				bind:value
 				onChange={handleContentChange}
@@ -700,21 +711,21 @@
 
 		<!-- Related Notes Section -->
 		{#if currentNote && !isZenMode}
-			<div class="w-[800px] mx-auto mt-6 pb-8">
+			<div class="w-full max-w-none sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto mt-4 sm:mt-6 pb-6 sm:pb-8 px-4 sm:px-6">
 				<Separator class="mb-4" />
 				
 				<div class="space-y-3">
-					<h3 class="text-base font-medium text-gray-700">Related Notes</h3>
+					<h3 class="text-sm sm:text-base font-medium text-gray-700">Related Notes</h3>
 					
 					{#if isLoadingRelatedNotes}
 						<div class="space-y-1">
 							{#each Array(3) as _}
 								<div class="flex items-center justify-between p-2">
-									<div class="flex items-center space-x-2 flex-1">
-										<Skeleton class="h-3.5 w-3.5" />
-										<Skeleton class="h-4 w-32" />
+									<div class="flex items-center space-x-2 flex-1 min-w-0">
+										<Skeleton class="h-3.5 w-3.5 flex-shrink-0" />
+										<Skeleton class="h-4 w-24 sm:w-32" />
 									</div>
-									<Skeleton class="h-3 w-8" />
+									<Skeleton class="h-3 w-8 flex-shrink-0" />
 								</div>
 							{/each}
 						</div>
@@ -741,7 +752,7 @@
 											{relatedNote.note.title}
 										</button>
 									</div>
-									<div class="flex items-center space-x-1">
+									<div class="flex items-center space-x-1 flex-shrink-0">
 										<span class="text-xs text-gray-500 font-mono">
 											{(relatedNote.score * 100).toFixed(0)}%
 										</span>
@@ -758,7 +769,7 @@
 
 <!-- Semantic Search Overlay -->
 {#if isSearchOpen}
-	<div class="fixed inset-0 z-50 flex items-start justify-center pt-20">
+	<div class="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20">
 		<!-- Backdrop -->
 		<div 
 			class="absolute inset-0 bg-black/20 backdrop-blur-sm" 
@@ -768,9 +779,9 @@
 		<!-- Search Container -->
 		<div class="relative w-full max-w-2xl mx-4">
 			<!-- Search Input -->
-			<div class="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
-				<div class="flex items-center gap-3">
-					<svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<div class="bg-white rounded-lg shadow-lg border border-gray-200 p-3 sm:p-4">
+				<div class="flex items-center gap-2 sm:gap-3">
+					<svg class="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
 					</svg>
 					<Input
@@ -778,25 +789,25 @@
 						bind:value={searchQuery}
 						onkeydown={handleSearchKeydown}
 						placeholder="Search your notes semantically..."
-						class="flex-1 border-0 shadow-none focus-visible:ring-0 text-base"
+						class="flex-1 border-0 shadow-none focus-visible:ring-0 text-sm sm:text-base"
 					/>
 					{#if isLoadingSearch}
-						<div class="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+						<div class="w-4 h-4 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0"></div>
 					{/if}
 				</div>
 			</div>
 			
 			<!-- Search Results -->
 			{#if searchQuery.trim() && (searchResults.length > 0 || isLoadingSearch || searchError)}
-				<div class="mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-hidden">
+				<div class="mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 sm:max-h-96 overflow-hidden">
 					{#if isLoadingSearch}
-						<div class="p-4">
+						<div class="p-3 sm:p-4">
 							<div class="space-y-3">
 								{#each Array(3) as _}
 									<div class="flex items-center justify-between">
-										<div class="flex items-center space-x-3 flex-1">
-											<Skeleton class="h-4 w-4" />
-											<Skeleton class="h-4 w-48" />
+										<div class="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+											<Skeleton class="h-4 w-4 flex-shrink-0" />
+											<Skeleton class="h-4 w-32 sm:w-48" />
 										</div>
 										<Skeleton class="h-3 w-8" />
 									</div>
@@ -804,22 +815,22 @@
 							</div>
 						</div>
 					{:else if searchError}
-						<div class="p-4 text-sm text-red-600">
+						<div class="p-3 sm:p-4 text-sm text-red-600">
 							{searchError}
 						</div>
 					{:else if searchResults.length === 0}
-						<div class="p-4 text-sm text-gray-500">
+						<div class="p-3 sm:p-4 text-sm text-gray-500">
 							No results found for "{searchQuery}"
 						</div>
 					{:else}
-						<div class="max-h-80 overflow-y-auto">
+						<div class="max-h-64 sm:max-h-80 overflow-y-auto">
 							{#each searchResults as result}
 								<button
-									class="w-full p-4 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+									class="w-full p-3 sm:p-4 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
 									onclick={() => selectSearchResult(result)}
 								>
 									<div class="flex items-center justify-between">
-										<div class="flex items-center space-x-3 flex-1 min-w-0">
+										<div class="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
 											<svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
 											</svg>
@@ -832,8 +843,8 @@
 												</div>
 											</div>
 										</div>
-										<div class="flex items-center space-x-2">
-											<span class="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded">
+										<div class="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+											<span class="text-xs text-gray-500 font-mono bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
 												{(result.score * 100).toFixed(0)}%
 											</span>
 										</div>
@@ -931,5 +942,39 @@
     width: 100% !important;
     max-width: none !important;
     margin: 0 !important;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    /* Ensure proper touch targets */
+    button, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Improve text readability on mobile */
+    .text-sm {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+    
+    /* Better spacing for mobile */
+    .space-y-3 > * + * {
+      margin-top: 0.75rem;
+    }
+  }
+
+  /* Mobile sidebar fixes */
+  @media (max-width: 1023px) {
+    /* Override shadcn sidebar styles for mobile */
+    :global([data-sidebar="sidebar"][data-mobile="true"]) {
+      background-color: #f9fafb !important;
+      border-right: none !important;
+    }
+    
+    :global([data-sidebar="sidebar"][data-mobile="true"] [data-slot="sidebar-inner"]) {
+      background-color: #f9fafb !important;
+      border-right: none !important;
+    }
   }
 </style>

@@ -59,40 +59,40 @@
 	}: Props = $props();
 </script>
 
-<div class="flex items-center gap-2 px-4 py-2 bg-background/50 backdrop-blur-sm">
+<div class="flex flex-wrap items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 bg-background/50 backdrop-blur-sm">
 	{#if editor}
 		<!-- Text formatting -->
 		<div class="flex items-center gap-1">
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isBold ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isBold ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleBold().run()}
 				title="Bold"
 			>
 				<BoldIcon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isItalic ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isItalic ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleItalic().run()}
 				title="Italic"
 			>
 				<ItalicIcon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isUnderline ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isUnderline ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleUnderline().run()}
 				title="Underline"
 			>
 				<UnderlineIcon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isStrike ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isStrike ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleStrike().run()}
 				title="Strikethrough"
 			>
 				<StrikethroughIcon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isCode ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isCode ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleCode().run()}
 				title="Code"
 			>
@@ -100,26 +100,26 @@
 			</button>
 		</div>
 
-		<div class="w-px h-4 bg-border"></div>
+		<div class="w-px h-4 bg-border hidden sm:block"></div>
 
 		<!-- Headings -->
 		<div class="flex items-center gap-1">
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isHeading1 ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isHeading1 ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
 				title="Heading 1"
 			>
 				<Heading1Icon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isHeading2 ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isHeading2 ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
 				title="Heading 2"
 			>
 				<Heading2Icon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isHeading3 ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isHeading3 ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
 				title="Heading 3"
 			>
@@ -127,19 +127,19 @@
 			</button>
 		</div>
 
-		<div class="w-px h-4 bg-border"></div>
+		<div class="w-px h-4 bg-border hidden sm:block"></div>
 
 		<!-- Lists -->
 		<div class="flex items-center gap-1">
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isBulletList ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isBulletList ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleBulletList().run()}
 				title="Bullet List"
 			>
 				<ListIcon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isOrderedList ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isOrderedList ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleOrderedList().run()}
 				title="Ordered List"
 			>
@@ -147,26 +147,26 @@
 			</button>
 		</div>
 
-		<div class="w-px h-4 bg-border"></div>
+		<div class="w-px h-4 bg-border hidden sm:block"></div>
 
 		<!-- Links, Tables, and Math -->
 		<div class="flex items-center gap-1">
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isLink ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isLink ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={onLinkClick}
 				title="Insert Link"
 			>
 				<LinkIcon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 				onclick={onTableClick}
 				title="Insert Table"
 			>
 				<TableIcon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 				onclick={() => {
 					const mathExpression = prompt('Enter LaTeX math expression (e.g., \\frac{1}{2}):');
 					if (mathExpression && editor) {
@@ -179,13 +179,13 @@
 			</button>
 		</div>
 
-		<div class="w-px h-4 bg-border"></div>
+		<div class="w-px h-4 bg-border hidden sm:block"></div>
 
 		<!-- Table Management -->
 		{#if editor && editorState.isTable}
 			<div class="flex items-center gap-1">
 				<button 
-					class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+					class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 					onclick={onAddTableRow}
 					title="Add Row"
 				>
@@ -194,7 +194,7 @@
 					</svg>
 				</button>
 				<button 
-					class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+					class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 					onclick={onAddTableColumn}
 					title="Add Column"
 				>
@@ -203,7 +203,7 @@
 					</svg>
 				</button>
 				<button 
-					class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+					class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 					onclick={onDeleteTableRow}
 					title="Delete Row"
 				>
@@ -212,7 +212,7 @@
 					</svg>
 				</button>
 				<button 
-					class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+					class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 					onclick={onDeleteTableColumn}
 					title="Delete Column"
 				>
@@ -223,26 +223,26 @@
 			</div>
 		{/if}
 
-		<div class="w-px h-4 bg-border"></div>
+		<div class="w-px h-4 bg-border hidden sm:block"></div>
 
 		<!-- Blocks -->
 		<div class="flex items-center gap-1">
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isCodeBlock ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isCodeBlock ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleCodeBlock().run()}
 				title="Code Block"
 			>
 				<Code2Icon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isBlockquote ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors {editorState.isBlockquote ? 'text-foreground bg-gray-100 shadow-sm' : ''}"
 				onclick={() => editor?.chain().focus().toggleBlockquote().run()}
 				title="Blockquote"
 			>
 				<QuoteIcon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 				onclick={() => editor?.chain().focus().setHorizontalRule().run()}
 				title="Horizontal Rule"
 			>
@@ -250,19 +250,19 @@
 			</button>
 		</div>
 
-		<div class="w-px h-4 bg-border"></div>
+		<div class="w-px h-4 bg-border hidden sm:block"></div>
 
 		<!-- History -->
 		<div class="flex items-center gap-1">
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 				onclick={() => editor?.chain().focus().undo().run()}
 				title="Undo"
 			>
 				<UndoIcon class="h-4 w-4" />
 			</button>
 			<button 
-				class="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+				class="p-1.5 sm:p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 				onclick={() => editor?.chain().focus().redo().run()}
 				title="Redo"
 			>

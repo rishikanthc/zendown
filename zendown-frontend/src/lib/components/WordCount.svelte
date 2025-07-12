@@ -26,16 +26,27 @@
 <style>
 	.word-count {
 		position: fixed;
-		bottom: 1.5rem;
-		right: 1.5rem;
+		bottom: 1rem;
+		right: 1rem;
 		z-index: 40;
 		background: rgba(255, 255, 255, 0.9);
 		backdrop-filter: blur(8px);
-		padding: 0.5rem 0.75rem;
-		border-radius: 0.5rem;
+		padding: 0.375rem 0.5rem;
+		border-radius: 0.375rem;
 		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 		transition: all 0.2s ease-in-out;
 		opacity: 0.8;
+		font-size: 0.75rem;
+	}
+
+	@media (min-width: 640px) {
+		.word-count {
+			bottom: 1.5rem;
+			right: 1.5rem;
+			padding: 0.5rem 0.75rem;
+			border-radius: 0.5rem;
+			font-size: 0.875rem;
+		}
 	}
 
 	.word-count:hover {
@@ -50,7 +61,6 @@
 	}
 
 	.word-count-text {
-		font-size: 0.875rem;
 		font-weight: 500;
 		color: #6b7280;
 		letter-spacing: 0.025em;
