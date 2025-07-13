@@ -287,7 +287,7 @@
 		padding: 1rem;
 		border-top: 1px solid #e5e7eb;
 		order: -1;
-		background-color: #f9fafb;
+		background-color: white;
 	}
 
 	.sidebar-content {
@@ -370,7 +370,7 @@
 			padding: 0;
 			border-top: none;
 			order: 0;
-			background-color: #f9fafb;
+			background-color: white;
 		}
 
 		.sidebar-content {
