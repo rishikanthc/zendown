@@ -16,9 +16,12 @@ import (
 	"zendown/database"
 	"zendown/semware"
 
-	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 	"github.com/JohannesKaufmann/html-to-markdown/v2/converter"
+	"github.com/JohannesKaufmann/html-to-markdown/v2/plugin/base"
+	"github.com/JohannesKaufmann/html-to-markdown/v2/plugin/commonmark"
+	"github.com/JohannesKaufmann/html-to-markdown/v2/plugin/table"
 	"github.com/gorilla/mux"
+	"golang.org/x/net/html"
 )
 
 type Handler struct {
@@ -668,6 +671,7 @@ func (h *Handler) SetupRoutes(router *mux.Router) {
 	api.HandleFunc("/notes/{id}", h.DeleteNote).Methods("DELETE")
 	api.HandleFunc("/notes/{id}/related", h.GetRelatedNotes).Methods("GET")
 	api.HandleFunc("/notes/{id}/export", h.ExportNoteAsMarkdown).Methods("GET")
+	api.HandleFunc("/notes/{id}/export-raw", h.ExportNoteAsRawHTML).Methods("GET")
 
 	// Attachment routes
 	api.HandleFunc("/attachments/upload", h.UploadAttachment).Methods("POST")
@@ -681,6 +685,58 @@ func (h *Handler) SetupRoutes(router *mux.Router) {
 	api.HandleFunc("/collections/{id}/notes", h.GetNotesByCollection).Methods("GET")
 	api.HandleFunc("/notes/{id}/collections", h.AddNoteToCollection).Methods("POST")
 	api.HandleFunc("/notes/{id}/collections", h.RemoveNoteFromCollection).Methods("DELETE")
+}
+
+// CalloutPlugin handles the conversion of callout divs to markdown
+type CalloutPlugin struct{}
+
+func NewCalloutPlugin() *CalloutPlugin {
+	return &CalloutPlugin{}
+}
+
+func (p *CalloutPlugin) Name() string {
+	return "callout"
+}
+
+func (p *CalloutPlugin) Init(conv *converter.Converter) error {
+	conv.Register.RendererFor("div", converter.TagTypeBlock, p.renderCallout, converter.PriorityStandard)
+	return nil
+}
+
+func (p *CalloutPlugin) renderCallout(ctx converter.Context, w converter.Writer, node *html.Node) converter.RenderStatus {
+	// Check if this is a callout div
+	var class string
+	for _, attr := range node.Attr {
+		if attr.Key == "class" {
+			class = attr.Val
+			break
+		}
+	}
+
+	if class == "" || !strings.Contains(class, "callout") {
+		return converter.RenderTryNext
+	}
+
+	// Get the callout type from data-callout attribute
+	calloutType := "note" // default type
+	for _, attr := range node.Attr {
+		if attr.Key == "data-callout" {
+			calloutType = attr.Val
+			break
+		}
+	}
+
+	// Create markdown callout syntax
+	// Using Obsidian-style callout syntax: > [!note] content
+	markdown := fmt.Sprintf("> [!%s]\n> ", calloutType)
+
+	// Write the callout header
+	w.Write([]byte(markdown))
+
+	// Render the children
+	ctx.RenderChildNodes(ctx, w, node)
+
+	return converter.RenderTryNext
 }
 
 // ExportNoteAsMarkdown exports a note as a markdown file for download
@@ -699,11 +755,18 @@ func (h *Handler) ExportNoteAsMarkdown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert HTML content to markdown
-	markdown, err := htmltomarkdown.ConvertString(
-		note.Content,
-		converter.WithDomain(""), // No domain needed for local content
+	// Create converter with custom plugins
+	conv := converter.NewConverter(
+		converter.WithPlugins(
+			base.NewBasePlugin(),
+			commonmark.NewCommonmarkPlugin(),
+			table.NewTablePlugin(),
+			NewCalloutPlugin(),
+		),
 	)
+
+	// Convert HTML content to markdown
+	markdown, err := conv.ConvertString(note.Content)
 	if err != nil {
 		log.Printf("Failed to convert note %d to markdown: %v", note.ID, err)
 		http.Error(w, "Failed to convert note to markdown", http.StatusInternalServerError)
@@ -721,6 +784,59 @@ func (h *Handler) ExportNoteAsMarkdown(w http.ResponseWriter, r *http.Request) {
 
 	// Write the markdown content
 	w.Write([]byte(fullMarkdown))
+}
+
+// ExportNoteAsRawHTML exports a note as raw HTML for debugging
+func (h *Handler) ExportNoteAsRawHTML(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid note ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get the note from database
+	note, err := h.db.GetNote(id)
+	if err != nil {
+		http.Error(w, "Note not found", http.StatusNotFound)
+		return
+	}
+
+	// Create a complete HTML document with the note content
+	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>%s</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .callout { border-left: 4px solid #3b82f6; padding: 1rem; margin: 1rem 0; background-color: #f8fafc; }
+        .callout.info { border-left-color: #3b82f6; background-color: #eff6ff; }
+        .callout.warning { border-left-color: #f59e0b; background-color: #fffbeb; }
+        .callout.error { border-left-color: #ef4444; background-color: #fef2f2; }
+        .callout.success { border-left-color: #10b981; background-color: #ecfdf5; }
+        table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+        th, td { border: 1px solid #d1d5db; padding: 0.5rem; text-align: left; }
+        th { background-color: #f9fafb; font-weight: 600; }
+        pre { background-color: #f3f4f6; padding: 1rem; border-radius: 0.375rem; overflow-x: auto; }
+        code { background-color: #f3f4f6; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-family: 'Monaco', 'Menlo', monospace; }
+    </style>
+</head>
+<body>
+    <h1>%s</h1>
+    %s
+</body>
+</html>`, note.Title, note.Title, note.Content)
+
+	// Set headers for file download
+	filename := fmt.Sprintf("%s.html", sanitizeFilename(note.Title))
+	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	w.Header().Set("Content-Length", strconv.Itoa(len(htmlContent)))
+
+	// Write the HTML content
+	w.Write([]byte(htmlContent))
 }
 
 // sanitizeFilename removes or replaces characters that are not safe for filenames

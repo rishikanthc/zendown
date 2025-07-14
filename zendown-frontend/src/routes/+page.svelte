@@ -347,6 +347,31 @@
 		}
 	}
 
+	// Export note as raw HTML (for context menu)
+	async function exportNoteAsRawHTML(noteId: number) {
+		try {
+			const blob = await api.exportNoteAsRawHTML(noteId);
+			
+			// Get the note to use its title for the filename
+			const note = notes.find(n => n.id === noteId);
+			const filename = note ? `${note.title}.html` : `note-${noteId}.html`;
+			
+			// Create download link
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			window.URL.revokeObjectURL(url);
+			
+			toast.success('Note exported as raw HTML successfully');
+		} catch (err) {
+			toast.error(`Failed to export note as raw HTML: ${err}`);
+		}
+	}
+
 	// Load related notes for the current note
 	async function loadRelatedNotes(noteId: number) {
 		if (!noteId) return;
@@ -569,7 +594,13 @@
 														<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
 														</svg>
-														Download
+														Download as Markdown
+													</ContextMenu.Item>
+													<ContextMenu.Item onSelect={() => exportNoteAsRawHTML(note.id)}>
+														<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+														</svg>
+														Download as Raw HTML
 													</ContextMenu.Item>
 													<ContextMenu.Item onSelect={() => deleteNoteById(note.id)}>
 														<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

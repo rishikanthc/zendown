@@ -261,6 +261,16 @@ class API {
 
 		return response.blob();
 	}
+
+	async exportNoteAsRawHTML(noteId: number): Promise<Blob> {
+		const response = await fetch(`${this.baseURL}/notes/${noteId}/export-raw`);
+
+		if (!response.ok) {
+			throw new Error(`Failed to export note as raw HTML: ${response.statusText}`);
+		}
+
+		return response.blob();
+	}
 }
 
 export const api = new API(); 
