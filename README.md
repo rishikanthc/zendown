@@ -1,50 +1,48 @@
-# Zendown
+<p align="center">
+  <img src="zendown-frontend/static/logo.png" alt="ZenDown Logo" width="150"/>
+</p>
 
-ZenDown is a minimalist self-hostable markdown note taking app. ZenDown features a local [ai-engine](https://github.com/rishikanthc/zendown-ai) that generates document embeddings for semantic search and automatic related notes based on a similarity score.
+<h1 align="center">ZenDown</h1>
+
+ZenDown is a self-hosted markdown note taking app. Built using Svelte5 and Go, the app runs as a single binary providing a highly performant user experience. ZenDown features a fully local AI-engine which uses document embeddings to provide smart features for automatic organization and content discovery. ZenDown allows you to focus on note-taking without the cognitive cost of bookkeeping or organization.
 
 ZenDown is ideal for frictionless zettelkasten as it removes the need for manually linking related notes. Related notes are automatically listed for each note. This reduces the cognitive burden of figuring out and connecting related content manually.
-
-Find any note based on semantic meaning. Instead of string based pattern matching search ZenDown understands and searches notes based on the semantic meaning of the query.
+Find any note based on semantic meaning. Instead of string based pattern matching search ZenDown understands and searches notes based on the semantic meaning of the query. Automatically organize similar notes into collections based on description
 
 ## Philosophy
 
 Despite there being several note taking apps, as someone with ADHD, I find the customizability and too many features very distracting (gets me down a rabbit hole ending up in setup-paralalysis - Looking at you Obsidian). I was looking for a simple note taking app that helps me focus on note taking with a minimal opinionated set of features. An important requirement is for all data and processing to happen locally on my own device.
 
-As someone who suffers from cognitive overload and dissonance, I wanted to remove the cognitive cost associated with organizing notes to make knowledge retrieval straight forward. So I leverage locally running Machine Learning models for addressing this. Loosely based on the zettelkasten system, the ML models make it trivial to find any content two ways:
+As someone who suffers from cognitive overload and dissonance, I wanted to remove the cognitive cost associated with organizing notes to make knowledge retrieval straight forward. So I leverage locally running Machine Learning models for addressing this. Loosely based on the zettelkasten system, the ML models make it trivial to find any content the following ways:
 
 * First, it allows searching documents by contextual meaning of the query sentence instead of string pattern matching
 * Second, for any note we automatically find and list all notes that are *semantically* similar so you can readily see all notes related to a topic
+* Third, auto-collection feature allows automatically grouping together similar notes for easy access
 
 This makes implementing zettelkasten trivial as you no longer need to manually link notes.
 Going forward the app will focus on a core set of opinionated features with a strong emphasis on ML/AI based automation for note taking related problems. Of course all ML/AI will be fully local. Checkout the Roadmap section for some of the features planned.
 
 ## Features
 
-* full markdown syntax support including callouts, latex equations and mermaid diagrams
-* Also supports block based rich text editing alternative
-* Zen mode allows distraction free writing
-* Semantic search based on actual meaning
-* Automatic listing of related notes using document embeddings
+* Fast, efficient and performant app, that scales to long notes
+* Minimal uncluttered and aesthetic UI
+* WYSIWYG markdown editor with support for latex equations and callouts/admonitions
+* Auto-save
+* Support for creating Collections/Tags
+* Auto-Collection feature to automatically group similar notes based on document semantics
+* Semantic search using document embeddings
+* Automatic compilation of related notes using semantics
 * Mobile friendly and responsive design allows you to use on any device
-* Minimal and uncluttered UI that keeps things simple and easy
-* Fast and lightweight editor that remains performant when handling long notes
-* Markdown live preview mode renders markdown while editing
-* Preview mode to render markdown
-* Keyboard shortcuts for most UI interactions for a fluid experience
-* modifying notes protected by admin login
-* dark mode
-* support for tags
+* Export notes as markdown
+* Full-text real-time search using BM25
+* Support for attaching images
 
 
 ## Screenshots
 
-![Home page](screenshots/home.png)
+![Home page](screenshots/app.png)
 
-![Editor](screenshots/editor-panel.png)
-
-![Editor Zen mode](screenshots/editor-zenmode.png)
-
-![Related Notes](screenshots/related-notes.png)
+![Editor Zen mode](screenshots/zen-mode.png)
 
 ## Installation
 
@@ -52,45 +50,60 @@ ZenDown is available as a docker image and can be deployed with the docker-compo
 
 ````compose
 services:
-  zendown-ai:
-    image: ghcr.io/rishikanthc/zendown-ai:v0.1.0
-    volumes:
-      - ./db:/db # This volume is for zendown-ai's own database
-    restart: unless-stopped
-
-  zendown:
-    image: ghcr.io/rishikanthc/zendown:v0.1.5
+  # SemWare AI service
+  semware:
+    image: ghcr.io/rishikanthc/semware:v0.1.0
+    container_name: zendown-semware
     ports:
-      - "3000:3000"
+      - "8000:8000"
     volumes:
-      - ./zendown_db_data:/db
+      - ./semware-db:/db
     environment:
-      - AI_SERVER_URL=http://zendown-ai:8000
-    depends_on:
-      - zendown-ai
+      - SEMWARE_API_KEY=test-api-key-12345
     restart: unless-stopped
+    networks:
+      - zendown-network
+
+  # ZenDown application
+  zendown:
+    image: ghcr.io/rishikanthc/zendown:latest
+    container_name: zendown
+    ports:
+      - "8080:8080"
+    environment:
+      # SemWare API Key - must match the one set in SemWare service
+      - SEMWARE_API_KEY=test-api-key-12345
+      # SemWare URL - points to the SemWare service within the Docker network
+      - SEMWARE_URL=http://semware:8000
+    volumes:
+      # Persist database files
+      - ./data:/app/data
+      # Persist attachment files
+      - ./attachments:/app/attachments
+    restart: unless-stopped
+    depends_on:
+      - semware
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/notes"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - zendown-network
+
+networks:
+  zendown-network:
+    name: zendown-network
+    driver: bridge 
 ````
-## Usage and keyboard shortcut
-
-To add a new note click the new note button on the home page. For working with rich text blocks, double click any selected text to show formatting options. Press the + button on a block on the left to insert a new block below. Click and drag the drag handle to reorder blocks.
-
-| Shortcut         | Action                                 |
-|------------------|----------------------------------------|
-| Ctrl/Cmd + s     | Save note                              |
-| Ctrl/Cmd + p     | Toggle between editor and preview modes|
-| Ctrl/Cmd + k     | Open semantic search                   |
-| Ctrl/Cmd + b     | Toggle sidebar visibility              |
-| Ctrl/Cmd + l     | Enable Zen mode for distraction-free writing |
-
 
 ## Roadmap
 
 I currently planning to build the following features just to give an idea of the direction the project is headed in. I’m open to feature requests if they solve a meaningful problem in note taking:
 
-* Support for uploading images
-* Automatic summarization of notes
+* Improve auto-collection 
 * Querying system to support [dataview](https://blacksmithgu.github.io/obsidian-dataview/) like queries
-* Learning to auto-tag notes from note data
 * PWA support
 * Publish notes on the internet publicly
 
