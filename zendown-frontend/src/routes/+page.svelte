@@ -657,10 +657,10 @@
 		<Sidebar.Root class="border-none bg-neutral-50">
 			<Sidebar.Header class="px-6 py-4">
 				<div class="flex items-center gap-2">
-					<div class="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-						<span class="text-primary-foreground font-semibold text-sm">Z</span>
+					<div class="h-8 w-8 rounded-lg bg-primary flex items-center justify-center overflow-hidden">
+						<img src="/logo.png" alt="Zendown Logo" class="h-6 w-6 object-contain" />
 					</div>
-					<h1 class="text-lg font-semibold text-foreground">Zendown</h1>
+					<h1 class="text-lg font-semibold text-foreground">ZenDown</h1>
 				</div>
 			</Sidebar.Header>
 			
