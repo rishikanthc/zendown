@@ -952,9 +952,9 @@
 					<h3 class="text-sm sm:text-base font-medium text-gray-700">Related Notes</h3>
 					
 					{#if isLoadingRelatedNotes}
-						<div class="space-y-0.5 sm:space-y-1">
+						<div class="space-y-0 sm:space-y-1">
 							{#each Array(3) as _}
-								<div class="flex items-center justify-between p-1.5 sm:p-2">
+								<div class="flex items-center justify-between p-1 sm:p-2">
 									<div class="flex items-center space-x-2 flex-1 min-w-0">
 										<Skeleton class="h-3.5 w-3.5 flex-shrink-0" />
 										<Skeleton class="h-4 w-24 sm:w-32" />
@@ -972,9 +972,9 @@
 							<p>No related notes found.</p>
 						</div>
 					{:else}
-						<div class="space-y-0.5 sm:space-y-1">
+						<div class="space-y-0 sm:space-y-1">
 							{#each relatedNotes as relatedNote}
-								<div class="flex items-center max-w-[800px] justify-between p-1.5 sm:p-2 rounded-md hover:bg-gray-50 transition-colors group">
+								<div class="flex items-center max-w-[800px] justify-between p-1 sm:p-1 rounded-md hover:bg-gray-50 transition-colors group">
 									<div class="flex items-center space-x-2 flex-1 min-w-0">
 										<svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -1222,11 +1222,6 @@
     /* Better spacing for mobile */
     .space-y-3 > * + * {
       margin-top: 0.75rem;
-    }
-    
-    /* Reduce spacing for related notes on mobile */
-    .space-y-0\.5 > * + * {
-      margin-top: 0.125rem;
     }
     
     /* Optimize padding for mobile */
