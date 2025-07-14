@@ -36,6 +36,7 @@ Going forward the app will focus on a core set of opinionated features with a st
 * Export notes as markdown
 * Full-text real-time search using BM25
 * Support for attaching images
+* Beautiful zen mode for distraction free writing
 
 
 ## Screenshots
