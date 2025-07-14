@@ -18,9 +18,10 @@
 		notesCount: number;
 		isExportingAll: boolean;
 		exportProgress: { current: number; total: number };
+		forceClose?: boolean;
 	}
 
-	let { currentNoteId, notesCount, isExportingAll, exportProgress }: Props = $props();
+	let { currentNoteId, notesCount, isExportingAll, exportProgress, forceClose = false }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		exportAllNotes: void;
@@ -46,6 +47,13 @@
 			allCollections = [];
 			isLoading = false;
 			hasError = false;
+		}
+	});
+
+	// Close popover when forceClose is true
+	$effect(() => {
+		if (forceClose && isOpen) {
+			isOpen = false;
 		}
 	});
 
