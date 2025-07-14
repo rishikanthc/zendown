@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -763,10 +764,28 @@ func (p *CalloutPlugin) renderCallout(ctx converter.Context, w converter.Writer,
 }
 
 // unescapeLatex converts escaped LaTeX characters back to their proper form
+// It preserves line breaks (\\\\ -> \\) while unescaping LaTeX commands (\\phi -> \phi)
 func unescapeLatex(content string) string {
-	// Replace double backslashes with single backslashes
-	// This handles cases like \\phi -> \phi
-	content = strings.ReplaceAll(content, "\\\\", "\\")
+	// Use regex to replace escaped LaTeX commands
+	// This handles various LaTeX command patterns while preserving line breaks
+
+	// Pattern 1: \\ followed by letters (like \\phi, \\times, \\left, etc.)
+	latexCommandRegex1 := regexp.MustCompile(`\\\\([a-zA-Z]+)`)
+	content = latexCommandRegex1.ReplaceAllString(content, `\$1`)
+
+	// Pattern 2: \\ followed by symbols (like \\{, \\}, \\[, \\], etc.)
+	latexCommandRegex2 := regexp.MustCompile(`\\\\([{}[\]()])`)
+	content = latexCommandRegex2.ReplaceAllString(content, `\$1`)
+
+	// Pattern 3: \\ followed by spaces (like \\ )
+	latexCommandRegex3 := regexp.MustCompile(`\\\\ `)
+	content = latexCommandRegex3.ReplaceAllString(content, `\\ `)
+
+	// Pattern 4: \\ followed by other single characters (like \\&, \\%, etc.)
+	// But NOT \\ followed by another \ (which would be line breaks)
+	latexCommandRegex4 := regexp.MustCompile(`\\\\([^\\\s])`)
+	content = latexCommandRegex4.ReplaceAllString(content, `\$1`)
+
 	return content
 }
 
@@ -857,6 +876,52 @@ func (p *InlineEquationPlugin) renderInlineEquation(ctx converter.Context, w con
 	return converter.RenderTryNext
 }
 
+// TextProcessingPlugin handles text transformations like LaTeX unescaping
+type TextProcessingPlugin struct{}
+
+func NewTextProcessingPlugin() *TextProcessingPlugin {
+	return &TextProcessingPlugin{}
+}
+
+func (p *TextProcessingPlugin) Name() string {
+	return "text-processing"
+}
+
+func (p *TextProcessingPlugin) Init(conv *converter.Converter) error {
+	// Register for text nodes to handle LaTeX unescaping
+	conv.Register.RendererFor("p", converter.TagTypeBlock, p.renderParagraph, converter.PriorityStandard)
+	return nil
+}
+
+func (p *TextProcessingPlugin) renderParagraph(ctx converter.Context, w converter.Writer, node *html.Node) converter.RenderStatus {
+	// Check if this paragraph contains LaTeX content
+	hasLatex := false
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		if child.Type == html.TextNode && strings.Contains(child.Data, "\\") {
+			hasLatex = true
+			break
+		}
+	}
+
+	if !hasLatex {
+		return converter.RenderTryNext
+	}
+
+	// Process the paragraph content with LaTeX unescaping
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		if child.Type == html.TextNode {
+			// Unescape LaTeX in text content
+			unescapedText := unescapeLatex(child.Data)
+			w.Write([]byte(unescapedText))
+		} else {
+			// For other elements, render them normally
+			ctx.RenderNodes(ctx, w, child)
+		}
+	}
+
+	return converter.RenderSuccess
+}
+
 // ExportNoteAsMarkdown exports a note as a markdown file for download
 func (h *Handler) ExportNoteAsMarkdown(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -882,6 +947,7 @@ func (h *Handler) ExportNoteAsMarkdown(w http.ResponseWriter, r *http.Request) {
 			NewCalloutPlugin(),
 			NewBlockEquationPlugin(),
 			NewInlineEquationPlugin(),
+			NewTextProcessingPlugin(),
 		),
 	)
 
