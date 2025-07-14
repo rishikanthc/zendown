@@ -762,6 +762,101 @@ func (p *CalloutPlugin) renderCallout(ctx converter.Context, w converter.Writer,
 	return converter.RenderSuccess
 }
 
+// unescapeLatex converts escaped LaTeX characters back to their proper form
+func unescapeLatex(content string) string {
+	// Replace double backslashes with single backslashes
+	// This handles cases like \\phi -> \phi
+	content = strings.ReplaceAll(content, "\\\\", "\\")
+	return content
+}
+
+// BlockEquationPlugin handles the conversion of block equation divs to markdown
+type BlockEquationPlugin struct{}
+
+func NewBlockEquationPlugin() *BlockEquationPlugin {
+	return &BlockEquationPlugin{}
+}
+
+func (p *BlockEquationPlugin) Name() string {
+	return "block-equation"
+}
+
+func (p *BlockEquationPlugin) Init(conv *converter.Converter) error {
+	conv.Register.RendererFor("div", converter.TagTypeBlock, p.renderBlockEquation, converter.PriorityStandard)
+	return nil
+}
+
+func (p *BlockEquationPlugin) renderBlockEquation(ctx converter.Context, w converter.Writer, node *html.Node) converter.RenderStatus {
+	// Check if this is a block equation div
+	var class string
+	var dataContent string
+	for _, attr := range node.Attr {
+		if attr.Key == "class" {
+			class = attr.Val
+		}
+		if attr.Key == "data-content" {
+			dataContent = attr.Val
+		}
+	}
+
+	if class == "" || !strings.Contains(class, "block-equation") {
+		return converter.RenderTryNext
+	}
+
+	// Extract the LaTeX content from data-content attribute
+	if dataContent == "" {
+		return converter.RenderTryNext
+	}
+
+	// Unescape LaTeX characters
+	dataContent = unescapeLatex(dataContent)
+
+	// The data-content contains the LaTeX with $$ delimiters, so we can use it directly
+	// Just add some spacing around it for better markdown formatting
+	w.Write([]byte("\n"))
+	w.Write([]byte(dataContent))
+	w.Write([]byte("\n\n"))
+
+	return converter.RenderSuccess
+}
+
+// InlineEquationPlugin handles the conversion of inline equations to markdown
+type InlineEquationPlugin struct{}
+
+func NewInlineEquationPlugin() *InlineEquationPlugin {
+	return &InlineEquationPlugin{}
+}
+
+func (p *InlineEquationPlugin) Name() string {
+	return "inline-equation"
+}
+
+func (p *InlineEquationPlugin) Init(conv *converter.Converter) error {
+	// Register for span elements that might contain inline equations
+	conv.Register.RendererFor("span", converter.TagTypeInline, p.renderInlineEquation, converter.PriorityStandard)
+	return nil
+}
+
+func (p *InlineEquationPlugin) renderInlineEquation(ctx converter.Context, w converter.Writer, node *html.Node) converter.RenderStatus {
+	// Check if this is an inline equation span
+	var class string
+	for _, attr := range node.Attr {
+		if attr.Key == "class" {
+			class = attr.Val
+			break
+		}
+	}
+
+	if class == "" || !strings.Contains(class, "inline-equation") {
+		return converter.RenderTryNext
+	}
+
+	// For inline equations, we'll let the default renderer handle the content
+	// but we might need to ensure proper $ delimiters
+	// For now, let the default renderer handle it
+	return converter.RenderTryNext
+}
+
 // ExportNoteAsMarkdown exports a note as a markdown file for download
 func (h *Handler) ExportNoteAsMarkdown(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -785,6 +880,8 @@ func (h *Handler) ExportNoteAsMarkdown(w http.ResponseWriter, r *http.Request) {
 			commonmark.NewCommonmarkPlugin(),
 			table.NewTablePlugin(),
 			NewCalloutPlugin(),
+			NewBlockEquationPlugin(),
+			NewInlineEquationPlugin(),
 		),
 	)
 
