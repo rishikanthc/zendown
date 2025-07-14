@@ -372,6 +372,41 @@
 		}
 	}
 
+	// Export all notes as zip
+	let isExportingAll = $state(false);
+	let exportProgress = $state({ current: 0, total: 0 });
+
+	async function exportAllNotesAsZip() {
+		if (isExportingAll) return; // Prevent multiple downloads
+		
+		try {
+			isExportingAll = true;
+			exportProgress = { current: 0, total: notes.length };
+			
+			// Show initial progress
+			toast.info(`Starting export of ${notes.length} notes...`);
+			
+			const blob = await api.exportAllNotesAsZip();
+			
+			// Create download link
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `zendown-notes-${new Date().toISOString().split('T')[0]}.zip`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			window.URL.revokeObjectURL(url);
+			
+			toast.success(`Successfully exported ${notes.length} notes as ZIP file`);
+		} catch (err) {
+			toast.error(`Failed to export all notes: ${err}`);
+		} finally {
+			isExportingAll = false;
+			exportProgress = { current: 0, total: 0 };
+		}
+	}
+
 	// Load related notes for the current note
 	async function loadRelatedNotes(noteId: number) {
 		if (!noteId) return;
@@ -726,6 +761,32 @@
 								/>
 							</div>
 						{/if}
+						
+						<!-- Bulk Export Button -->
+						<Button 
+							variant="ghost" 
+							size="icon" 
+							onclick={exportAllNotesAsZip}
+							disabled={isExportingAll || notes.length === 0}
+							class="h-8 w-8 sm:h-9 sm:w-9 relative"
+							title="Export all notes as ZIP"
+						>
+							{#if isExportingAll}
+								<!-- Progress indicator -->
+								<div class="absolute inset-0 flex items-center justify-center">
+									<div class="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+								</div>
+								<!-- Progress text overlay -->
+								<div class="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-gray-500 whitespace-nowrap">
+									{exportProgress.current} of {exportProgress.total}
+								</div>
+							{:else}
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8l-4 4m0 0l-4-4m4 4V4"></path>
+								</svg>
+							{/if}
+						</Button>
+						
 						<Button 
 							variant="ghost" 
 							size="icon" 

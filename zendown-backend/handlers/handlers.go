@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"archive/zip"
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -13,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"zendown/database"
 	"zendown/semware"
@@ -667,6 +670,7 @@ func (h *Handler) SetupRoutes(router *mux.Router) {
 	api.HandleFunc("/notes", h.GetAllNotes).Methods("GET")
 	api.HandleFunc("/notes/search", h.SearchNotes).Methods("GET")
 	api.HandleFunc("/notes/semantic-search", h.SemanticSearch).Methods("GET")
+	api.HandleFunc("/notes/export-all", h.ExportAllNotesAsZip).Methods("GET")
 	api.HandleFunc("/notes/{id}", h.GetNote).Methods("GET")
 	api.HandleFunc("/notes/{id}", h.UpdateNote).Methods("PUT")
 	api.HandleFunc("/notes/{id}", h.DeleteNote).Methods("DELETE")
@@ -972,6 +976,106 @@ func (h *Handler) ExportNoteAsMarkdown(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fullMarkdown))
 }
 
+// ExportAllNotesAsZip exports all notes as a zip file containing markdown files
+func (h *Handler) ExportAllNotesAsZip(w http.ResponseWriter, r *http.Request) {
+	// Get all notes from database
+	notes, err := h.db.GetAllNotes()
+	if err != nil {
+		log.Printf("Failed to get notes for bulk export: %v", err)
+		http.Error(w, "Failed to get notes", http.StatusInternalServerError)
+		return
+	}
+
+	if len(notes) == 0 {
+		http.Error(w, "No notes to export", http.StatusNotFound)
+		return
+	}
+
+	// Create converter with custom plugins
+	conv := converter.NewConverter(
+		converter.WithPlugins(
+			base.NewBasePlugin(),
+			commonmark.NewCommonmarkPlugin(),
+			table.NewTablePlugin(),
+			NewCalloutPlugin(),
+			NewBlockEquationPlugin(),
+			NewInlineEquationPlugin(),
+			NewTextProcessingPlugin(),
+		),
+	)
+
+	// Create zip file in memory
+	zipBuffer := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(zipBuffer)
+
+	// Track failed notes for warning
+	var failedNotes []string
+	successfulCount := 0
+
+	// Process each note
+	for _, note := range notes {
+		// Convert HTML content to markdown
+		markdown, err := conv.ConvertString(note.Content)
+		if err != nil {
+			log.Printf("Failed to convert note %d (%s) to markdown: %v", note.ID, note.Title, err)
+			failedNotes = append(failedNotes, note.Title)
+			continue
+		}
+
+		// Create the markdown content with title
+		fullMarkdown := fmt.Sprintf("# %s\n\n%s", note.Title, markdown)
+
+		// Create filename with note ID to avoid conflicts
+		filename := fmt.Sprintf("%s-%d.md", sanitizeFilename(note.Title), note.ID)
+
+		// Add file to zip
+		fileWriter, err := zipWriter.Create(filename)
+		if err != nil {
+			log.Printf("Failed to create zip entry for note %d (%s): %v", note.ID, note.Title, err)
+			failedNotes = append(failedNotes, note.Title)
+			continue
+		}
+
+		_, err = fileWriter.Write([]byte(fullMarkdown))
+		if err != nil {
+			log.Printf("Failed to write note %d (%s) to zip: %v", note.ID, note.Title, err)
+			failedNotes = append(failedNotes, note.Title)
+			continue
+		}
+
+		successfulCount++
+	}
+
+	// Close the zip writer
+	err = zipWriter.Close()
+	if err != nil {
+		log.Printf("Failed to close zip file: %v", err)
+		http.Error(w, "Failed to create zip file", http.StatusInternalServerError)
+		return
+	}
+
+	// Get the zip content
+	zipContent := zipBuffer.Bytes()
+
+	// Create filename with current date
+	dateStr := time.Now().Format("2006-01-02")
+	filename := fmt.Sprintf("zendown-notes-%s.zip", dateStr)
+
+	// Set headers for file download
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	w.Header().Set("Content-Length", strconv.Itoa(len(zipContent)))
+
+	// Write the zip content
+	w.Write(zipContent)
+
+	// Log summary
+	log.Printf("Bulk export completed: %d successful, %d failed", successfulCount, len(failedNotes))
+	if len(failedNotes) > 0 {
+		log.Printf("Failed notes: %v", failedNotes)
+	}
+}
+
 // ExportNoteAsRawHTML exports a note as raw HTML for debugging
 func (h *Handler) ExportNoteAsRawHTML(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -1002,7 +1106,7 @@ func (h *Handler) ExportNoteAsRawHTML(w http.ResponseWriter, r *http.Request) {
         .callout.warning { border-left-color: #f59e0b; background-color: #fffbeb; }
         .callout.error { border-left-color: #ef4444; background-color: #fef2f2; }
         .callout.success { border-left-color: #10b981; background-color: #ecfdf5; }
-        table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+        table { border-collapse: collapse; width: 100%%; margin: 1rem 0; }
         th, td { border: 1px solid #d1d5db; padding: 0.5rem; text-align: left; }
         th { background-color: #f9fafb; font-weight: 600; }
         pre { background-color: #f3f4f6; padding: 1rem; border-radius: 0.375rem; overflow-x: auto; }

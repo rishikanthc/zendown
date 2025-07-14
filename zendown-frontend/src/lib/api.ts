@@ -271,6 +271,16 @@ class API {
 
 		return response.blob();
 	}
+
+	async exportAllNotesAsZip(): Promise<Blob> {
+		const response = await fetch(`${this.baseURL}/notes/export-all`);
+
+		if (!response.ok) {
+			throw new Error(`Failed to export all notes: ${response.statusText}`);
+		}
+
+		return response.blob();
+	}
 }
 
 export const api = new API(); 
