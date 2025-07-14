@@ -25,7 +25,7 @@
 
 	const dispatch = createEventDispatcher<{
 		exportAllNotes: void;
-		openSearch: void;
+		openSearch: { type: 'semantic' | 'fulltext' };
 		addCollection: { noteId: number; collectionName: string };
 		removeCollection: { noteId: number; collectionName: string };
 	}>();
@@ -161,8 +161,8 @@
 		dispatch('exportAllNotes');
 	}
 
-	function handleSearchClick() {
-		dispatch('openSearch');
+	function handleSearchClick(type: 'semantic' | 'fulltext') {
+		dispatch('openSearch', { type });
 	}
 </script>
 
@@ -276,14 +276,26 @@
 				{/if}
 			</button>
 
-			<!-- Search Button -->
-			<button
-				class="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center gap-3"
-				onclick={handleSearchClick}
-			>
-				<SearchIcon class="w-4 h-4 text-gray-600" />
-				<span>Search Notes</span>
-			</button>
+			<!-- Search Options -->
+			<div class="border-t border-gray-100 pt-2">
+				<div class="px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+					Search Options
+				</div>
+				<button
+					class="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center gap-3"
+					onclick={() => handleSearchClick('semantic')}
+				>
+					<SearchIcon class="w-4 h-4 text-gray-600" />
+					<span>Semantic Search</span>
+				</button>
+				<button
+					class="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center gap-3"
+					onclick={() => handleSearchClick('fulltext')}
+				>
+					<SearchIcon class="w-4 h-4 text-gray-600" />
+					<span>Full Text Search</span>
+				</button>
+			</div>
 		</div>
 	</Popover.Content>
 </Popover.Root>

@@ -37,6 +37,11 @@ export interface SemanticSearchResponse {
 	score: number;
 }
 
+export interface FullTextSearchResponse {
+	note: Note;
+	score: number;
+}
+
 export interface Collection {
 	id: number;
 	name: string;
@@ -159,6 +164,21 @@ class API {
 
 		if (!response.ok) {
 			throw new Error(`Failed to perform semantic search: ${response.statusText}`);
+		}
+
+		return response.json();
+	}
+
+	async fullTextSearch(query: string, limit: number = 20): Promise<FullTextSearchResponse[]> {
+		const params = new URLSearchParams({
+			q: query,
+			limit: limit.toString()
+		});
+		
+		const response = await fetch(`${this.baseURL}/notes/fulltext-search?${params}`);
+
+		if (!response.ok) {
+			throw new Error(`Failed to perform full-text search: ${response.statusText}`);
 		}
 
 		return response.json();

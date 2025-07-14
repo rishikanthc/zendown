@@ -41,6 +41,13 @@ func main() {
 	// Initialize handlers
 	h := handlers.NewHandler(db)
 
+	// Rebuild BM25 index on startup (in background)
+	go func() {
+		if err := h.RebuildBM25Index(); err != nil {
+			log.Printf("Failed to rebuild BM25 index: %v", err)
+		}
+	}()
+
 	// Create router
 	router := mux.NewRouter()
 

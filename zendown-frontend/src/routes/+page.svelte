@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '$lib/tw.css';
-	import { api, type Note, type RelatedNoteResponse, type SemanticSearchResponse, type Collection } from '$lib/api';
+	import { api, type Note, type RelatedNoteResponse, type SemanticSearchResponse, type FullTextSearchResponse, type Collection } from '$lib/api';
 	import { onMount, onDestroy } from 'svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
@@ -48,10 +48,11 @@
 	let isLoadingRelatedNotes = $state(false);
 	let relatedNotesError = $state('');
 
-	// Semantic search state
+	// Search state
 	let isSearchOpen = $state(false);
 	let searchQuery = $state('');
-	let searchResults: SemanticSearchResponse[] = $state([]);
+	let searchType = $state<'semantic' | 'fulltext'>('semantic');
+	let searchResults: (SemanticSearchResponse | FullTextSearchResponse)[] = $state([]);
 	let isLoadingSearch = $state(false);
 	let searchError = $state('');
 
@@ -431,10 +432,11 @@
 		}
 	}
 
-	// Semantic search functions
+	// Search functions
 	function openSearch() {
 		isSearchOpen = true;
 		searchQuery = '';
+		searchType = 'semantic';
 		searchResults = [];
 		searchError = '';
 		// Focus the input after a brief delay to ensure the overlay is rendered
@@ -451,6 +453,17 @@
 		searchError = '';
 	}
 
+	function setSearchType(type: 'semantic' | 'fulltext') {
+		searchType = type;
+		searchResults = [];
+		searchError = '';
+		// Focus the input after switching types
+		setTimeout(() => {
+			const input = document.getElementById('search-input');
+			if (input) input.focus();
+		}, 100);
+	}
+
 	async function performSearch() {
 		if (!searchQuery.trim()) return;
 		
@@ -458,25 +471,35 @@
 			isLoadingSearch = true;
 			searchError = '';
 			
-			searchResults = await api.semanticSearch(searchQuery.trim(), 0.3);
+			console.log(`Performing ${searchType} search for: "${searchQuery}"`);
+			
+			if (searchType === 'semantic') {
+				const results = await api.semanticSearch(searchQuery.trim(), 0.3);
+				searchResults = results || [];
+				console.log('Semantic search results:', results);
+			} else {
+				const results = await api.fullTextSearch(searchQuery.trim(), 20);
+				searchResults = results || [];
+				console.log('Full text search results:', results);
+			}
 			
 		} catch (err) {
-			searchError = `Failed to perform search: ${err}`;
-			console.error('Error performing semantic search:', err);
+			searchError = `Failed to perform ${searchType} search: ${err}`;
+			console.error(`Error performing ${searchType} search:`, err);
+			searchResults = [];
 		} finally {
 			isLoadingSearch = false;
 		}
 	}
 
 	function handleSearchKeydown(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
-			performSearch();
-		} else if (event.key === 'Escape') {
+		if (event.key === 'Escape') {
 			closeSearch();
 		}
+		// Remove Enter key handling since we want real-time search
 	}
 
-	function selectSearchResult(result: SemanticSearchResponse) {
+	function selectSearchResult(result: SemanticSearchResponse | FullTextSearchResponse) {
 		loadNote(result.note);
 		closeSearch();
 	}
@@ -539,12 +562,13 @@
 		exportAllNotesAsZip();
 	}
 
-	function handleOpenSearch() {
+	function handleOpenSearch(event: CustomEvent<{ type: 'semantic' | 'fulltext' }>) {
 		// Close sidebar on mobile when search opens
 		if (sidebar && sidebar.isMobile) {
 			sidebar.setOpenMobile(false);
 		}
 		openSearch();
+		setSearchType(event.detail.type);
 	}
 
 	// Sync auto-collection
@@ -592,6 +616,37 @@
 	$effect(() => {
 		if (activeTab === 'collections') {
 			loadCollections();
+		}
+	});
+
+	// Real-time search effect
+	let searchTimeout: number;
+	$effect(() => {
+		if (searchQuery.trim()) {
+			// Clear existing timeout
+			if (searchTimeout) {
+				clearTimeout(searchTimeout);
+			}
+			
+			// Debounce search
+			searchTimeout = setTimeout(() => {
+				performSearch();
+			}, 300);
+		} else {
+			// Clear results when query is empty
+			searchResults = [];
+			searchError = '';
+		}
+	});
+
+	// Trigger search when search type changes (if there's a query)
+	$effect(() => {
+		if (searchQuery.trim()) {
+			// Clear existing timeout and perform immediate search
+			if (searchTimeout) {
+				clearTimeout(searchTimeout);
+			}
+			performSearch();
 		}
 	});
 </script>
@@ -953,7 +1008,7 @@
 	on:created={handleAutoCollectionCreated}
 />
 
-<!-- Semantic Search Overlay -->
+<!-- Search Overlay -->
 {#if isSearchOpen}
 	<div class="fixed inset-0 z-[100] flex items-start justify-center pt-16 sm:pt-20">
 		<!-- Backdrop -->
@@ -964,6 +1019,24 @@
 		
 		<!-- Search Container -->
 		<div class="relative w-full max-w-2xl mx-4">
+			<!-- Search Type Selector -->
+			<div class="bg-white rounded-lg shadow-lg border border-gray-200 p-3 sm:p-4 mb-2">
+				<div class="flex items-center gap-2">
+					<button
+						class="px-3 py-1.5 text-sm rounded-md transition-colors {searchType === 'semantic' ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}"
+						onclick={() => setSearchType('semantic')}
+					>
+						Semantic Search
+					</button>
+					<button
+						class="px-3 py-1.5 text-sm rounded-md transition-colors {searchType === 'fulltext' ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}"
+						onclick={() => setSearchType('fulltext')}
+					>
+						Full Text Search
+					</button>
+				</div>
+			</div>
+
 			<!-- Search Input -->
 			<div class="bg-white rounded-lg shadow-lg border border-gray-200 p-3 sm:p-4">
 				<div class="flex items-center gap-2 sm:gap-3">
@@ -974,7 +1047,7 @@
 						id="search-input"
 						bind:value={searchQuery}
 						onkeydown={handleSearchKeydown}
-						placeholder="Search your notes semantically..."
+						placeholder={searchType === 'semantic' ? 'Search your notes semantically...' : 'Search your notes by keywords...'}
 						class="flex-1 border-0 shadow-none focus-visible:ring-0 text-sm sm:text-base"
 					/>
 					{#if isLoadingSearch}
@@ -984,7 +1057,7 @@
 			</div>
 			
 			<!-- Search Results -->
-			{#if searchQuery.trim() && (searchResults.length > 0 || isLoadingSearch || searchError)}
+			{#if searchQuery.trim() && ((searchResults && searchResults.length > 0) || isLoadingSearch || searchError)}
 				<div class="mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 sm:max-h-96 overflow-hidden">
 					{#if isLoadingSearch}
 						<div class="p-3 sm:p-4">
@@ -1004,38 +1077,40 @@
 						<div class="p-3 sm:p-4 text-sm text-red-600">
 							{searchError}
 						</div>
-					{:else if searchResults.length === 0}
+					{:else if !searchResults || searchResults.length === 0}
 						<div class="p-3 sm:p-4 text-sm text-gray-500">
 							No results found for "{searchQuery}"
 						</div>
 					{:else}
 						<div class="max-h-64 sm:max-h-80 overflow-y-auto">
 							{#each searchResults as result}
-								<button
-									class="w-full p-3 sm:p-4 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
-									onclick={() => selectSearchResult(result)}
-								>
-									<div class="flex items-center justify-between">
-										<div class="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-											<svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-											</svg>
-											<div class="min-w-0 flex-1">
-												<div class="text-sm font-medium text-gray-900 truncate">
-													{result.note.title}
-												</div>
-												<div class="text-xs text-gray-500 mt-1">
-													{new Date(result.note.updated_at).toLocaleDateString()}
+								{#if result && result.note}
+									<button
+										class="w-full p-3 sm:p-4 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+										onclick={() => selectSearchResult(result)}
+									>
+										<div class="flex items-center justify-between">
+											<div class="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+												<svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+												</svg>
+												<div class="min-w-0 flex-1">
+													<div class="text-sm font-medium text-gray-900 truncate">
+														{result.note.title || 'Untitled'}
+													</div>
+													<div class="text-xs text-gray-500 mt-1">
+														{result.note.updated_at ? new Date(result.note.updated_at).toLocaleDateString() : ''}
+													</div>
 												</div>
 											</div>
+											<div class="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+												<span class="text-xs text-gray-500 font-mono bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
+													{result.score ? (result.score * 100).toFixed(0) : '0'}%
+												</span>
+											</div>
 										</div>
-										<div class="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-											<span class="text-xs text-gray-500 font-mono bg-gray-100 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
-												{(result.score * 100).toFixed(0)}%
-											</span>
-										</div>
-									</div>
-								</button>
+									</button>
+								{/if}
 							{/each}
 						</div>
 					{/if}

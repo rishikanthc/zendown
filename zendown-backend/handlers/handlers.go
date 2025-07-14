@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"zendown/database"
+	"zendown/search"
 	"zendown/semware"
 
 	"github.com/JohannesKaufmann/html-to-markdown/v2/converter"
@@ -31,12 +32,24 @@ import (
 type Handler struct {
 	db      *database.DB
 	semware *semware.Client
+	bm25    *search.BM25SearchService
 }
 
 func NewHandler(db *database.DB) *Handler {
+	// Initialize BM25 search service
+	log.Printf("Initializing BM25 search service...")
+	bm25Service, err := search.NewBM25SearchService("data/bm25_index")
+	if err != nil {
+		log.Printf("Warning: Failed to initialize BM25 search service: %v", err)
+		bm25Service = nil
+	} else {
+		log.Printf("BM25 search service initialized successfully")
+	}
+
 	return &Handler{
 		db:      db,
 		semware: semware.NewClient(),
+		bm25:    bm25Service,
 	}
 }
 
@@ -89,6 +102,15 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		if _, err := h.semware.UpsertDocument(strconv.FormatInt(note.ID, 10), note.Content); err != nil {
 			log.Printf("Failed to sync note %d with SemWare: %v", note.ID, err)
+		}
+	}()
+
+	// Sync with BM25 index
+	go func() {
+		if h.bm25 != nil {
+			if err := h.bm25.IndexNote(note); err != nil {
+				log.Printf("Failed to sync note %d with BM25 index: %v", note.ID, err)
+			}
 		}
 	}()
 
@@ -153,6 +175,15 @@ func (h *Handler) UpdateNote(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	// Sync with BM25 index
+	go func() {
+		if h.bm25 != nil {
+			if err := h.bm25.IndexNote(note); err != nil {
+				log.Printf("Failed to sync note %d with BM25 index: %v", note.ID, err)
+			}
+		}
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(note)
 }
@@ -174,6 +205,15 @@ func (h *Handler) DeleteNote(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		if err := h.semware.DeleteDocument(strconv.FormatInt(id, 10)); err != nil {
 			log.Printf("Failed to delete note %d from SemWare: %v", id, err)
+		}
+	}()
+
+	// Delete from BM25 index
+	go func() {
+		if h.bm25 != nil {
+			if err := h.bm25.RemoveNote(id); err != nil {
+				log.Printf("Failed to delete note %d from BM25 index: %v", id, err)
+			}
 		}
 	}()
 
@@ -259,6 +299,12 @@ type SemanticSearchResponse struct {
 	Score float64        `json:"score"`
 }
 
+// FullTextSearchResponse represents a note with its BM25 score from full-text search
+type FullTextSearchResponse struct {
+	Note  *database.Note `json:"note"`
+	Score float64        `json:"score"`
+}
+
 // SemanticSearch performs semantic search across all notes
 func (h *Handler) SemanticSearch(w http.ResponseWriter, r *http.Request) {
 	// Get query parameters
@@ -319,6 +365,62 @@ func (h *Handler) SemanticSearch(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(searchResults)
+}
+
+// FullTextSearch performs BM25 full-text search across all notes
+func (h *Handler) FullTextSearch(w http.ResponseWriter, r *http.Request) {
+	// Get query parameters
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		log.Printf("FullTextSearch: Missing query parameter")
+		http.Error(w, "Search query is required", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("FullTextSearch: Query='%s'", query)
+
+	limitStr := r.URL.Query().Get("limit")
+	limit := 20 // default limit
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	// Check if BM25 service is available
+	if h.bm25 == nil {
+		log.Printf("FullTextSearch: BM25 service not available")
+		http.Error(w, "Full-text search service not available", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("FullTextSearch: Performing search with limit=%d", limit)
+
+	// Perform BM25 search
+	searchResults, err := h.bm25.Search(query, limit)
+	if err != nil {
+		log.Printf("FullTextSearch: BM25 search error: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to perform full-text search: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("FullTextSearch: BM25 returned %d raw results", len(searchResults))
+
+	// Convert to response format
+	var results []FullTextSearchResponse
+	for _, result := range searchResults {
+		if result.Note != nil {
+			results = append(results, FullTextSearchResponse{
+				Note:  result.Note,
+				Score: result.Score,
+			})
+		}
+	}
+
+	log.Printf("FullTextSearch: Returning %d valid results", len(results))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
 }
 
 // Supported image MIME types
@@ -805,6 +907,7 @@ func (h *Handler) SetupRoutes(router *mux.Router) {
 	api.HandleFunc("/notes", h.GetAllNotes).Methods("GET")
 	api.HandleFunc("/notes/search", h.SearchNotes).Methods("GET")
 	api.HandleFunc("/notes/semantic-search", h.SemanticSearch).Methods("GET")
+	api.HandleFunc("/notes/fulltext-search", h.FullTextSearch).Methods("GET")
 	api.HandleFunc("/notes/export-all", h.ExportAllNotesAsZip).Methods("GET")
 	api.HandleFunc("/notes/{id}", h.GetNote).Methods("GET")
 	api.HandleFunc("/notes/{id}", h.UpdateNote).Methods("PUT")
@@ -827,6 +930,41 @@ func (h *Handler) SetupRoutes(router *mux.Router) {
 	api.HandleFunc("/notes/{id}/collections", h.RemoveNoteFromCollection).Methods("DELETE")
 	api.HandleFunc("/collections/auto", h.CreateAutoCollection).Methods("POST")
 	api.HandleFunc("/collections/auto/{id}", h.SyncAutoCollection).Methods("PUT")
+}
+
+// RebuildBM25Index rebuilds the BM25 search index from all notes in the database
+func (h *Handler) RebuildBM25Index() error {
+	if h.bm25 == nil {
+		return fmt.Errorf("BM25 service not available")
+	}
+
+	log.Printf("Starting BM25 index rebuild...")
+
+	// Get all notes from database
+	notes, err := h.db.GetAllNotes()
+	if err != nil {
+		return fmt.Errorf("failed to get notes for index rebuild: %w", err)
+	}
+
+	log.Printf("Found %d notes to index", len(notes))
+
+	// Index each note
+	for _, note := range notes {
+		if err := h.bm25.IndexNote(note); err != nil {
+			log.Printf("Failed to index note %d: %v", note.ID, err)
+			// Continue with other notes
+		}
+	}
+
+	// Get final document count
+	count, err := h.bm25.GetDocumentCount()
+	if err != nil {
+		log.Printf("Failed to get document count: %v", err)
+	} else {
+		log.Printf("BM25 index rebuild complete. Indexed %d documents", count)
+	}
+
+	return nil
 }
 
 // CalloutPlugin handles the conversion of callout divs to markdown
