@@ -17,6 +17,7 @@
 	import { useSidebar } from '$lib/components/ui/sidebar/context.svelte.js';
 	import Collections from '$lib/components/Collections.svelte';
 	import AutoCollectionDialog from '$lib/components/AutoCollectionDialog.svelte';
+	import HoverMenu from '$lib/components/HoverMenu.svelte';
 	import ArrowBigDownDashIcon from '@lucide/svelte/icons/arrow-big-down-dash';
 	
 	let value = $state('');
@@ -521,6 +522,15 @@
 		activeTab = 'collections';
 	}
 
+	// Hover menu event handlers
+	function handleExportAllNotes() {
+		exportAllNotesAsZip();
+	}
+
+	function handleOpenSearch() {
+		openSearch();
+	}
+
 	// Sync auto-collection
 	async function syncAutoCollection(collectionId: number) {
 		try {
@@ -815,50 +825,17 @@
 						{/if}
 					</div>
 					<div class="flex items-center gap-1 sm:gap-2">
-						{#if currentNote}
-							<!-- Hide collections on mobile, show in sidebar instead -->
-							<div class="hidden sm:block">
-								<Collections
-									currentNoteId={currentNote.id}
-									on:addCollection={handleAddCollection}
-									on:removeCollection={handleRemoveCollection}
-								/>
-							</div>
-						{/if}
-						
-						<!-- Bulk Export Button -->
-						<Button 
-							variant="ghost" 
-							size="icon" 
-							onclick={exportAllNotesAsZip}
-							disabled={isExportingAll || notes.length === 0}
-							class="h-8 w-8 sm:h-9 sm:w-9 relative"
-							title="Export all notes as ZIP"
-						>
-							{#if isExportingAll}
-								<!-- Progress indicator -->
-								<div class="absolute inset-0 flex items-center justify-center">
-									<div class="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
-								</div>
-								<!-- Progress text overlay -->
-								<div class="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-gray-500 whitespace-nowrap">
-									{exportProgress.current} of {exportProgress.total}
-								</div>
-							{:else}
-								<ArrowBigDownDashIcon class="w-4 h-4" />
-							{/if}
-						</Button>
-						
-						<Button 
-							variant="ghost" 
-							size="icon" 
-							onclick={openSearch}
-							class="h-8 w-8 sm:h-9 sm:w-9"
-						>
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-							</svg>
-						</Button>
+						<!-- Hover Menu -->
+						<HoverMenu
+							currentNoteId={currentNote?.id || null}
+							notesCount={notes.length}
+							isExportingAll={isExportingAll}
+							exportProgress={exportProgress}
+							on:exportAllNotes={handleExportAllNotes}
+							on:openSearch={handleOpenSearch}
+							on:addCollection={handleAddCollection}
+							on:removeCollection={handleRemoveCollection}
+						/>
 					</div>
 				</div>
 			</header>
