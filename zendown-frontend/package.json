@@ -75,6 +75,7 @@
 		"@tiptap/starter-kit": "^2.25.0",
 		"bits-ui": "^2.8.10",
 		"carta-md": "^4.11.1",
+		"fuse.js": "^7.1.0",
 		"isomorphic-dompurify": "^2.26.0",
 		"katex": "^0.16.22",
 		"lowlight": "^3.3.0",

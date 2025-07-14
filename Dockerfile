@@ -1,6 +1,7 @@
 # Multi-stage build for ZenDown with embedded frontend
+# Best practice approach for multi-platform builds
 
-# Stage 1: Build frontend
+# Stage 1: Build frontend (always use build platform)
 FROM --platform=$BUILDPLATFORM node:18-alpine AS frontend-builder
 
 WORKDIR /app
@@ -13,14 +14,11 @@ COPY zendown-frontend/tsconfig.json ./
 COPY zendown-frontend/src ./src
 COPY zendown-frontend/static ./static
 
-# Install dependencies
-RUN npm ci
+# Install dependencies and build frontend
+RUN npm ci && npm run build
 
-# Build frontend and verify it worked
-RUN npm run build && ls -la build/
-
-# Stage 2: Build Go backend
-FROM --platform=$TARGETPLATFORM golang:1.24 AS backend-builder
+# Stage 2: Build Go backend (cross-compilation approach)
+FROM --platform=$BUILDPLATFORM golang:1.24 AS backend-builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -42,20 +40,27 @@ COPY zendown-backend/ ./
 # Copy built frontend from previous stage
 COPY --from=frontend-builder /app/build ./build
 
-# Verify the build directory exists and has content
-RUN ls -la build/ && echo "Build directory contents verified"
-
-# Build the binary natively for the target platform (pure Go, no CGO)
+# Set up cross-compilation environment
 ENV CGO_ENABLED=0
-RUN go build -ldflags="-s -w" -o zendown ./
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
 
-# Verify the binary was created
-RUN ls -la zendown && echo "Binary created successfully"
+# Configure Go for cross-compilation based on target platform
+RUN case "$TARGETPLATFORM" in \
+        "linux/amd64") \
+            export GOOS=linux GOARCH=amd64 GOAMD64=v1 \
+            && echo "Building for linux/amd64 with GOAMD64=v1" ;; \
+        "linux/arm64") \
+            export GOOS=linux GOARCH=arm64 \
+            && echo "Building for linux/arm64" ;; \
+        *) \
+            echo "Unsupported platform: $TARGETPLATFORM" && exit 1 ;; \
+    esac \
+    && echo "Building with GOOS=$GOOS GOARCH=$GOARCH" \
+    && go build -ldflags="-s -w" -o zendown ./
 
-# Make the binary executable
-RUN chmod +x /app/zendown
-
-# Final stage: Runtime
+# Stage 3: Runtime (use target platform)
 FROM --platform=$TARGETPLATFORM alpine:latest
 
 # Install runtime dependencies
@@ -64,11 +69,8 @@ RUN apk add --no-cache \
     sqlite \
     curl
 
-# Copy the binary
+# Copy the binary from builder stage
 COPY --from=backend-builder /app/zendown /app/zendown
-
-# Verify binary exists in final stage
-RUN ls -la /app/zendown && echo "Binary verified in final stage"
 
 # Set working directory
 WORKDIR /app
