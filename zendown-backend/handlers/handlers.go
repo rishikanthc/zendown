@@ -728,15 +728,38 @@ func (p *CalloutPlugin) renderCallout(ctx converter.Context, w converter.Writer,
 
 	// Create markdown callout syntax
 	// Using Obsidian-style callout syntax: > [!note] content
-	markdown := fmt.Sprintf("> [!%s]\n> ", calloutType)
+	w.Write([]byte(fmt.Sprintf("> [!%s]\n", calloutType)))
 
-	// Write the callout header
-	w.Write([]byte(markdown))
+	// Process children and format them properly
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		if child.Type == html.TextNode {
+			// Handle text nodes
+			text := strings.TrimSpace(child.Data)
+			if text != "" {
+				w.Write([]byte("> " + text + "\n"))
+			}
+		} else if child.Type == html.ElementNode {
+			// Handle element nodes (like <p>)
+			if child.Data == "p" {
+				// Get the text content of the paragraph
+				var content strings.Builder
+				for textNode := child.FirstChild; textNode != nil; textNode = textNode.NextSibling {
+					if textNode.Type == html.TextNode {
+						content.WriteString(textNode.Data)
+					}
+				}
+				text := strings.TrimSpace(content.String())
+				if text != "" {
+					w.Write([]byte("> " + text + "\n"))
+				}
+			} else {
+				// For other elements, render them normally
+				ctx.RenderNodes(ctx, w, child)
+			}
+		}
+	}
 
-	// Render the children
-	ctx.RenderChildNodes(ctx, w, node)
-
-	return converter.RenderTryNext
+	return converter.RenderSuccess
 }
 
 // ExportNoteAsMarkdown exports a note as a markdown file for download
