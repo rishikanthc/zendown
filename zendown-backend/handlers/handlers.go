@@ -58,6 +58,16 @@ type RemoveCollectionRequest struct {
 	CollectionName string `json:"collection_name"`
 }
 
+type CreateAutoCollectionRequest struct {
+	CollectionName string  `json:"collection_name"`
+	Description    string  `json:"description"`
+	Threshold      float64 `json:"threshold"`
+}
+
+type SyncAutoCollectionRequest struct {
+	CollectionID int64 `json:"collection_id"`
+}
+
 func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 	var req CreateNoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -663,6 +673,131 @@ func (h *Handler) RemoveNoteFromCollection(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// CreateAutoCollection creates a new auto-collection and populates it with semantically similar notes
+func (h *Handler) CreateAutoCollection(w http.ResponseWriter, r *http.Request) {
+	var req CreateAutoCollectionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.CollectionName == "" {
+		http.Error(w, "Collection name is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.Description == "" {
+		http.Error(w, "Description is required", http.StatusBadRequest)
+		return
+	}
+
+	// Validate threshold
+	if req.Threshold < 0 || req.Threshold > 1 {
+		http.Error(w, "Threshold must be between 0 and 1", http.StatusBadRequest)
+		return
+	}
+
+	// Create the auto-collection
+	collection, err := h.db.CreateAutoCollection(req.CollectionName, req.Description, req.Threshold, true)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Perform semantic search to find similar notes
+	semwareResponse, err := h.semware.SemanticSearch(req.Description, req.Threshold)
+	if err != nil {
+		log.Printf("Failed to perform semantic search for auto-collection %s: %v", req.CollectionName, err)
+		// Don't fail the request, just return the collection without notes
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(collection)
+		return
+	}
+
+	// Add notes to the collection
+	var noteIDs []int64
+	for _, result := range semwareResponse.SimilarResults {
+		noteID, err := strconv.ParseInt(result.ID, 10, 64)
+		if err != nil {
+			continue
+		}
+
+		// Verify the note exists
+		if _, err := h.db.GetNote(noteID); err != nil {
+			continue
+		}
+
+		noteIDs = append(noteIDs, noteID)
+	}
+
+	// Sync the collection with the found notes
+	if len(noteIDs) > 0 {
+		if err := h.db.SyncAutoCollection(collection.ID, noteIDs); err != nil {
+			log.Printf("Failed to sync auto-collection %s: %v", req.CollectionName, err)
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(collection)
+}
+
+// SyncAutoCollection updates an auto-collection with new semantically similar notes
+func (h *Handler) SyncAutoCollection(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	collectionID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid collection ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get the collection
+	collection, err := h.db.GetCollection(collectionID)
+	if err != nil {
+		http.Error(w, "Collection not found", http.StatusNotFound)
+		return
+	}
+
+	if !collection.IsAuto {
+		http.Error(w, "Only auto-collections can be synced", http.StatusBadRequest)
+		return
+	}
+
+	// Perform semantic search to find similar notes
+	semwareResponse, err := h.semware.SemanticSearch(collection.Description, collection.Threshold)
+	if err != nil {
+		log.Printf("Failed to perform semantic search for auto-collection %s: %v", collection.Name, err)
+		http.Error(w, "Failed to perform semantic search", http.StatusInternalServerError)
+		return
+	}
+
+	// Get note IDs from search results
+	var noteIDs []int64
+	for _, result := range semwareResponse.SimilarResults {
+		noteID, err := strconv.ParseInt(result.ID, 10, 64)
+		if err != nil {
+			continue
+		}
+
+		// Verify the note exists
+		if _, err := h.db.GetNote(noteID); err != nil {
+			continue
+		}
+
+		noteIDs = append(noteIDs, noteID)
+	}
+
+	// Sync the collection with the found notes
+	if err := h.db.SyncAutoCollection(collectionID, noteIDs); err != nil {
+		log.Printf("Failed to sync auto-collection %s: %v", collection.Name, err)
+		http.Error(w, "Failed to sync collection", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *Handler) SetupRoutes(router *mux.Router) {
 	// API routes
 	api := router.PathPrefix("/api").Subrouter()
@@ -690,6 +825,8 @@ func (h *Handler) SetupRoutes(router *mux.Router) {
 	api.HandleFunc("/collections/{id}/notes", h.GetNotesByCollection).Methods("GET")
 	api.HandleFunc("/notes/{id}/collections", h.AddNoteToCollection).Methods("POST")
 	api.HandleFunc("/notes/{id}/collections", h.RemoveNoteFromCollection).Methods("DELETE")
+	api.HandleFunc("/collections/auto", h.CreateAutoCollection).Methods("POST")
+	api.HandleFunc("/collections/auto/{id}", h.SyncAutoCollection).Methods("PUT")
 }
 
 // CalloutPlugin handles the conversion of callout divs to markdown

@@ -16,9 +16,12 @@ type Note struct {
 }
 
 type Collection struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	CreatedAt   time.Time `json:"created_at"`
+	IsAuto      bool      `json:"is_auto"`
+	Description string    `json:"description,omitempty"`
+	Threshold   float64   `json:"threshold,omitempty"`
 }
 
 type NoteCollection struct {
@@ -71,7 +74,10 @@ func createTables(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS collections (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL UNIQUE,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		is_auto BOOLEAN DEFAULT FALSE,
+		description TEXT,
+		threshold REAL DEFAULT 0.3
 	);
 
 	CREATE TABLE IF NOT EXISTS note_collections (
@@ -100,17 +106,73 @@ func createTables(db *sql.DB) error {
 	`
 
 	_, err := db.Exec(query)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Migrate existing collections table to add auto-collection columns
+	return migrateCollectionsTable(db)
+}
+
+func migrateCollectionsTable(db *sql.DB) error {
+	// Check if is_auto column exists
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('collections') WHERE name = 'is_auto'").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	// If column doesn't exist, add it
+	if count == 0 {
+		_, err = db.Exec("ALTER TABLE collections ADD COLUMN is_auto BOOLEAN DEFAULT FALSE")
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check if description column exists
+	err = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('collections') WHERE name = 'description'").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	// If column doesn't exist, add it
+	if count == 0 {
+		_, err = db.Exec("ALTER TABLE collections ADD COLUMN description TEXT")
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check if threshold column exists
+	err = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('collections') WHERE name = 'threshold'").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	// If column doesn't exist, add it
+	if count == 0 {
+		_, err = db.Exec("ALTER TABLE collections ADD COLUMN threshold REAL DEFAULT 0.3")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Collection methods
 func (db *DB) CreateCollection(name string) (*Collection, error) {
+	return db.CreateAutoCollection(name, "", 0.3, false)
+}
+
+func (db *DB) CreateAutoCollection(name, description string, threshold float64, isAuto bool) (*Collection, error) {
 	query := `
-	INSERT INTO collections (name, created_at)
-	VALUES (?, CURRENT_TIMESTAMP)
+	INSERT INTO collections (name, description, threshold, is_auto, created_at)
+	VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
 	`
 
-	result, err := db.Exec(query, name)
+	result, err := db.Exec(query, name, description, threshold, isAuto)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +187,7 @@ func (db *DB) CreateCollection(name string) (*Collection, error) {
 
 func (db *DB) GetCollection(id int64) (*Collection, error) {
 	query := `
-	SELECT id, name, created_at
+	SELECT id, name, created_at, COALESCE(is_auto, FALSE) as is_auto, COALESCE(description, '') as description, COALESCE(threshold, 0.3) as threshold
 	FROM collections
 	WHERE id = ?
 	`
@@ -135,6 +197,9 @@ func (db *DB) GetCollection(id int64) (*Collection, error) {
 		&collection.ID,
 		&collection.Name,
 		&collection.CreatedAt,
+		&collection.IsAuto,
+		&collection.Description,
+		&collection.Threshold,
 	)
 
 	if err != nil {
@@ -146,7 +211,7 @@ func (db *DB) GetCollection(id int64) (*Collection, error) {
 
 func (db *DB) GetCollectionByName(name string) (*Collection, error) {
 	query := `
-	SELECT id, name, created_at
+	SELECT id, name, created_at, COALESCE(is_auto, FALSE) as is_auto, COALESCE(description, '') as description, COALESCE(threshold, 0.3) as threshold
 	FROM collections
 	WHERE name = ?
 	`
@@ -156,6 +221,9 @@ func (db *DB) GetCollectionByName(name string) (*Collection, error) {
 		&collection.ID,
 		&collection.Name,
 		&collection.CreatedAt,
+		&collection.IsAuto,
+		&collection.Description,
+		&collection.Threshold,
 	)
 
 	if err != nil {
@@ -167,7 +235,7 @@ func (db *DB) GetCollectionByName(name string) (*Collection, error) {
 
 func (db *DB) GetAllCollections() ([]*Collection, error) {
 	query := `
-	SELECT id, name, created_at
+	SELECT id, name, created_at, COALESCE(is_auto, FALSE) as is_auto, COALESCE(description, '') as description, COALESCE(threshold, 0.3) as threshold
 	FROM collections
 	ORDER BY name ASC
 	`
@@ -185,6 +253,9 @@ func (db *DB) GetAllCollections() ([]*Collection, error) {
 			&collection.ID,
 			&collection.Name,
 			&collection.CreatedAt,
+			&collection.IsAuto,
+			&collection.Description,
+			&collection.Threshold,
 		)
 		if err != nil {
 			return nil, err
@@ -222,9 +293,40 @@ func (db *DB) RemoveNoteFromCollection(noteID, collectionID int64) error {
 	return err
 }
 
+// SyncAutoCollection removes all notes from an auto-collection and re-adds them based on semantic similarity
+func (db *DB) SyncAutoCollection(collectionID int64, noteIDs []int64) error {
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Remove all existing notes from the collection
+	removeQuery := `DELETE FROM note_collections WHERE collection_id = ?`
+	_, err = tx.Exec(removeQuery, collectionID)
+	if err != nil {
+		return err
+	}
+
+	// Add the new notes to the collection
+	if len(noteIDs) > 0 {
+		insertQuery := `INSERT INTO note_collections (note_id, collection_id) VALUES (?, ?)`
+		for _, noteID := range noteIDs {
+			_, err = tx.Exec(insertQuery, noteID, collectionID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Commit the transaction
+	return tx.Commit()
+}
+
 func (db *DB) GetNoteCollections(noteID int64) ([]*Collection, error) {
 	query := `
-	SELECT c.id, c.name, c.created_at
+	SELECT c.id, c.name, c.created_at, COALESCE(c.is_auto, FALSE) as is_auto, COALESCE(c.description, '') as description, COALESCE(c.threshold, 0.3) as threshold
 	FROM collections c
 	JOIN note_collections nc ON c.id = nc.collection_id
 	WHERE nc.note_id = ?
@@ -244,6 +346,9 @@ func (db *DB) GetNoteCollections(noteID int64) ([]*Collection, error) {
 			&collection.ID,
 			&collection.Name,
 			&collection.CreatedAt,
+			&collection.IsAuto,
+			&collection.Description,
+			&collection.Threshold,
 		)
 		if err != nil {
 			return nil, err

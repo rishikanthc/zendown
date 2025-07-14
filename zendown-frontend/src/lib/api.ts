@@ -41,6 +41,9 @@ export interface Collection {
 	id: number;
 	name: string;
 	created_at: string;
+	is_auto?: boolean;
+	description?: string;
+	threshold?: number;
 }
 
 export interface AddCollectionRequest {
@@ -49,6 +52,12 @@ export interface AddCollectionRequest {
 
 export interface RemoveCollectionRequest {
 	collection_name: string;
+}
+
+export interface CreateAutoCollectionRequest {
+	collection_name: string;
+	description: string;
+	threshold: number;
 }
 
 class API {
@@ -249,6 +258,32 @@ class API {
 
 		if (!response.ok) {
 			throw new Error(`Failed to remove note from collection: ${response.statusText}`);
+		}
+	}
+
+	async createAutoCollection(request: CreateAutoCollectionRequest): Promise<Collection> {
+		const response = await fetch(`${this.baseURL}/collections/auto`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(request),
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to create auto-collection: ${response.statusText}`);
+		}
+
+		return response.json();
+	}
+
+	async syncAutoCollection(collectionId: number): Promise<void> {
+		const response = await fetch(`${this.baseURL}/collections/auto/${collectionId}`, {
+			method: 'PUT',
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to sync auto-collection: ${response.statusText}`);
 		}
 	}
 

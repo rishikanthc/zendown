@@ -16,6 +16,7 @@
 	import { toast } from 'svelte-sonner';
 	import { useSidebar } from '$lib/components/ui/sidebar/context.svelte.js';
 	import Collections from '$lib/components/Collections.svelte';
+	import AutoCollectionDialog from '$lib/components/AutoCollectionDialog.svelte';
 	import ArrowBigDownDashIcon from '@lucide/svelte/icons/arrow-big-down-dash';
 	
 	let value = $state('');
@@ -56,6 +57,9 @@
 	// Zen mode state
 	let isZenMode = $state(false);
 	let previousSidebarState = $state(true); // Store sidebar state before entering zen mode
+
+	// Auto-collection dialog state
+	let isAutoCollectionDialogOpen = $state(false);
 
 	// Reactive sorted notes - automatically updates when notes change
 	let sortedNotes = $derived(() => {
@@ -502,6 +506,37 @@
 		}
 	}
 
+	// Auto-collection dialog handlers
+	function handleAutoCollectionDialogClose() {
+		isAutoCollectionDialogOpen = false;
+	}
+
+	async function handleAutoCollectionCreated(event: CustomEvent<{ collectionName: string }>) {
+		const { collectionName } = event.detail;
+		
+		// Reload collections to get the new auto-collection
+		await loadCollections();
+		
+		// Switch to collections tab to show the new collection
+		activeTab = 'collections';
+	}
+
+	// Sync auto-collection
+	async function syncAutoCollection(collectionId: number) {
+		try {
+			await api.syncAutoCollection(collectionId);
+			toast.success('Collection synced successfully');
+			
+			// Refresh the collection notes if it's currently expanded
+			if (expandedCollections.includes(collectionId)) {
+				await refreshCollectionNotes(collectionId);
+			}
+		} catch (error: any) {
+			console.error('Failed to sync auto-collection:', error);
+			toast.error(`Failed to sync collection: ${error.message}`);
+		}
+	}
+
 	// Handle content changes from TiptapEditor
 	function handleContentChange(newValue: string) {
 		value = newValue;
@@ -558,6 +593,14 @@
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
 									</svg>
 									<span>New Note</span>
+								</Sidebar.MenuButton>
+							</Sidebar.MenuItem>
+							<Sidebar.MenuItem>
+								<Sidebar.MenuButton onclick={() => isAutoCollectionDialogOpen = true}>
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+									</svg>
+									<span>New Auto-Collection</span>
 								</Sidebar.MenuButton>
 							</Sidebar.MenuItem>
 							<Sidebar.MenuItem>
@@ -677,17 +720,37 @@
 								{:else}
 									<Sidebar.Menu>
 										{#each collections as collection}
-											<Sidebar.MenuItem>
-												<Sidebar.MenuButton 
-													isActive={expandedCollections.includes(collection.id)}
-													onclick={() => toggleCollection(collection.id)}
-												>
-													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-													</svg>
-													<span>{collection.name}</span>
-												</Sidebar.MenuButton>
-											</Sidebar.MenuItem>
+											<ContextMenu.Root>
+												<ContextMenu.Trigger>
+													<Sidebar.MenuItem>
+														<Sidebar.MenuButton 
+															isActive={expandedCollections.includes(collection.id)}
+															onclick={() => toggleCollection(collection.id)}
+														>
+															<svg 
+																class="w-4 h-4" 
+																fill="none" 
+																stroke="currentColor" 
+																viewBox="0 0 24 24"
+																class:text-blue-500={collection.is_auto}
+															>
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+															</svg>
+															<span>{collection.name}</span>
+														</Sidebar.MenuButton>
+													</Sidebar.MenuItem>
+												</ContextMenu.Trigger>
+												{#if collection.is_auto}
+													<ContextMenu.Content>
+														<ContextMenu.Item onSelect={() => syncAutoCollection(collection.id)}>
+															<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+															</svg>
+															Sync Collection
+														</ContextMenu.Item>
+													</ContextMenu.Content>
+												{/if}
+											</ContextMenu.Root>
 											
 											<!-- Collection notes (shown when expanded) -->
 											{#if expandedCollections.includes(collection.id)}
@@ -888,6 +951,13 @@
 		{/if}
 	</main>
 </Sidebar.Provider>
+
+<!-- Auto-Collection Dialog -->
+<AutoCollectionDialog 
+	bind:open={isAutoCollectionDialogOpen}
+	on:close={handleAutoCollectionDialogClose}
+	on:created={handleAutoCollectionCreated}
+/>
 
 <!-- Semantic Search Overlay -->
 {#if isSearchOpen}
