@@ -251,6 +251,16 @@ class API {
 			throw new Error(`Failed to remove note from collection: ${response.statusText}`);
 		}
 	}
+
+	async exportNoteAsMarkdown(noteId: number): Promise<Blob> {
+		const response = await fetch(`${this.baseURL}/notes/${noteId}/export`);
+
+		if (!response.ok) {
+			throw new Error(`Failed to export note: ${response.statusText}`);
+		}
+
+		return response.blob();
+	}
 }
 
 export const api = new API(); 

@@ -16,6 +16,8 @@ import (
 	"zendown/database"
 	"zendown/semware"
 
+	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
+	"github.com/JohannesKaufmann/html-to-markdown/v2/converter"
 	"github.com/gorilla/mux"
 )
 
@@ -665,6 +667,7 @@ func (h *Handler) SetupRoutes(router *mux.Router) {
 	api.HandleFunc("/notes/{id}", h.UpdateNote).Methods("PUT")
 	api.HandleFunc("/notes/{id}", h.DeleteNote).Methods("DELETE")
 	api.HandleFunc("/notes/{id}/related", h.GetRelatedNotes).Methods("GET")
+	api.HandleFunc("/notes/{id}/export", h.ExportNoteAsMarkdown).Methods("GET")
 
 	// Attachment routes
 	api.HandleFunc("/attachments/upload", h.UploadAttachment).Methods("POST")
@@ -678,4 +681,65 @@ func (h *Handler) SetupRoutes(router *mux.Router) {
 	api.HandleFunc("/collections/{id}/notes", h.GetNotesByCollection).Methods("GET")
 	api.HandleFunc("/notes/{id}/collections", h.AddNoteToCollection).Methods("POST")
 	api.HandleFunc("/notes/{id}/collections", h.RemoveNoteFromCollection).Methods("DELETE")
+}
+
+// ExportNoteAsMarkdown exports a note as a markdown file for download
+func (h *Handler) ExportNoteAsMarkdown(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid note ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get the note from database
+	note, err := h.db.GetNote(id)
+	if err != nil {
+		http.Error(w, "Note not found", http.StatusNotFound)
+		return
+	}
+
+	// Convert HTML content to markdown
+	markdown, err := htmltomarkdown.ConvertString(
+		note.Content,
+		converter.WithDomain(""), // No domain needed for local content
+	)
+	if err != nil {
+		log.Printf("Failed to convert note %d to markdown: %v", note.ID, err)
+		http.Error(w, "Failed to convert note to markdown", http.StatusInternalServerError)
+		return
+	}
+
+	// Create the markdown content with title
+	fullMarkdown := fmt.Sprintf("# %s\n\n%s", note.Title, markdown)
+
+	// Set headers for file download
+	filename := fmt.Sprintf("%s.md", sanitizeFilename(note.Title))
+	w.Header().Set("Content-Type", "text/markdown")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	w.Header().Set("Content-Length", strconv.Itoa(len(fullMarkdown)))
+
+	// Write the markdown content
+	w.Write([]byte(fullMarkdown))
+}
+
+// sanitizeFilename removes or replaces characters that are not safe for filenames
+func sanitizeFilename(filename string) string {
+	// Replace unsafe characters with underscores
+	unsafe := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|"}
+	result := filename
+	for _, char := range unsafe {
+		result = strings.ReplaceAll(result, char, "_")
+	}
+
+	// Remove leading/trailing spaces and dots
+	result = strings.TrimSpace(result)
+	result = strings.Trim(result, ".")
+
+	// If the result is empty, use a default name
+	if result == "" {
+		result = "untitled"
+	}
+
+	return result
 }
